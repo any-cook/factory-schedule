@@ -295,8 +295,11 @@ select option{background:#1c2128;}
       <div class="msec">
         <div class="msec-title">📋 基本情報</div>
         <div style="display:flex;flex-direction:column;gap:11px;">
-          <div class="field"><label>タイトル *</label><input id="fm_title" placeholder="作業内容を入力"></div>
-          <div class="field"><label>📦 製造商品</label><input id="fm_product" placeholder="例：自動車ドア・電子基板・部品A…"></div>
+          <div class="field">
+            <label>タイトル・製造商品 *</label>
+            <input id="fm_title" placeholder="例：生産ライン稼働 / 自動車ドアパネル">
+            <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">タイトルと製造商品を「 / 」や「　」で区切って入力できます</div>
+          </div>
           <div class="field"><label>工場 *</label><select id="fm_factory"></select></div>
           <div class="field"><label>担当者</label><select id="fm_person"></select></div>
         </div>
@@ -320,6 +323,7 @@ select option{background:#1c2128;}
     </div>
     <div class="mfooter">
       <button class="btn btn-danger btn-sm" id="fm_delBtn" style="display:none;margin-right:auto;" onclick="deleteFM()">削除</button>
+      <button class="btn btn-ghost btn-sm" id="fm_copyBtn" style="display:none;" onclick="copyFM()">📋 複写</button>
       <button class="btn btn-ghost" onclick="closeFM()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveFM()">保存</button>
     </div>
@@ -431,6 +435,7 @@ select option{background:#1c2128;}
     </div>
     <div class="mfooter">
       <button class="btn btn-danger btn-sm" id="pm_delBtn" style="display:none;margin-right:auto;" onclick="deletePM()">削除</button>
+      <button class="btn btn-ghost btn-sm" id="pm_copyBtn" style="display:none;" onclick="copyPM()">📋 複写</button>
       <button class="btn btn-ghost" onclick="closePM()">キャンセル</button>
       <button class="btn btn-personal" onclick="savePM()">保存</button>
     </div>
@@ -473,7 +478,7 @@ let persons=[
 // type: 'factory' | 'personal'
 let schedules=[
   {id:'s1',type:'factory',title:'朝礼・点検',product:'',start:todayAt(8,0),end:todayAt(8,30),factoryId:'f1',personId:'p1',color:null,repeatId:null,notif:false,notifMin:15,note:''},
-  {id:'s2',type:'factory',title:'生産ライン稼働',product:'自動車ドアパネル',start:todayAt(9,0),end:todayAt(12,0),factoryId:'f1',personId:'p2',color:null,repeatId:null,notif:false,notifMin:15,note:''},
+  {id:'s2',type:'factory',title:'生産ライン稼働 / 自動車ドアパネル',product:'',start:todayAt(9,0),end:todayAt(12,0),factoryId:'f1',personId:'p2',color:null,repeatId:null,notif:false,notifMin:15,note:''},
   {id:'s3',type:'factory',title:'安全講習',product:'',start:todayAt(14,0),end:todayAt(16,0),factoryId:'f2',personId:'p3',color:null,repeatId:null,notif:false,notifMin:15,note:'全員参加'},
   {id:'s4',type:'personal',title:'月次ミーティング',product:'',start:todayAt(10,0),end:todayAt(11,0),factoryId:null,personId:'p1',color:'#58a6ff',repeatId:null,notif:true,notifMin:15,note:'資料持参'},
 ];
@@ -871,8 +876,8 @@ function openFactoryModal(){
   editingFMId=null;fmColor=null;
   document.getElementById('fmTitle').textContent='工場予定を追加';
   document.getElementById('fm_delBtn').style.display='none';
+  document.getElementById('fm_copyBtn').style.display='none';
   document.getElementById('fm_title').value='';
-  document.getElementById('fm_product').value='';
   const now=new Date();
   document.getElementById('fm_start').value=dtStr(now,now.getHours(),0);
   document.getElementById('fm_end').value=dtStr(now,now.getHours()+1,0);
@@ -891,8 +896,8 @@ function openFMEdit(id){
   editingFMId=id;fmColor=s.color;
   document.getElementById('fmTitle').textContent='工場予定を編集';
   document.getElementById('fm_delBtn').style.display='inline-block';
+  document.getElementById('fm_copyBtn').style.display='inline-block';
   document.getElementById('fm_title').value=s.title;
-  document.getElementById('fm_product').value=s.product||'';
   document.getElementById('fm_start').value=toInput(s.start);
   document.getElementById('fm_end').value=toInput(s.end);
   populateFMSelects(s.factoryId,s.personId);
@@ -900,6 +905,24 @@ function openFMEdit(id){
   document.getElementById('factoryModal').classList.add('open');
 }
 function closeFM(){document.getElementById('factoryModal').classList.remove('open');}
+
+// 📋 工場予定を複写
+function copyFM(){
+  const src=schedules.find(x=>x.id===editingFMId);if(!src)return;
+  closeFM();
+  // 少し待ってから新規モードで開く
+  setTimeout(()=>{
+    openFactoryModal();
+    document.getElementById('fm_title').value=src.title;
+    document.getElementById('fm_start').value=toInput(src.start);
+    const e2=new Date(src.end);
+    document.getElementById('fm_end').value=`${e2.getFullYear()}-${pad(e2.getMonth()+1)}-${pad(e2.getDate())}T${pad(e2.getHours())}:${pad(e2.getMinutes())}`;
+    populateFMSelects(src.factoryId,src.personId);
+    buildFMColorPicker(src.color);
+    document.getElementById('fmTitle').textContent='工場予定を複写';
+    showToast('📋 複写しました。日時を変更して保存してください');
+  },120);
+}
 
 function populateFMSelects(fid,pid){
   document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===fid?'selected':''}>${f.name}</option>`).join('');
@@ -932,7 +955,7 @@ function saveFM(){
   if(!title){showToast('⚠ タイトルを入力してください');return;}
   const obj={
     type:'factory',title,
-    product:document.getElementById('fm_product').value.trim(),
+    product:'', // タイトルフィールドに統合済み
     start:new Date(document.getElementById('fm_start').value).toISOString(),
     end:new Date(document.getElementById('fm_end').value).toISOString(),
     factoryId:document.getElementById('fm_factory').value,
@@ -957,6 +980,7 @@ function openPersonalModal(){
   editingPMId=null;pmColor='#58a6ff';rType='daily';rWeekdays=[];
   document.getElementById('pm_title_hdr').textContent='個人予定を追加';
   document.getElementById('pm_delBtn').style.display='none';
+  document.getElementById('pm_copyBtn').style.display='none';
   document.getElementById('pm_title').value='';
   document.getElementById('pm_note').value='';
   document.getElementById('pm_notifOn').checked=false;
@@ -980,6 +1004,7 @@ function openPMEdit(id){
   editingPMId=id;pmColor=s.color||'#58a6ff';
   document.getElementById('pm_title_hdr').textContent='個人予定を編集';
   document.getElementById('pm_delBtn').style.display='inline-block';
+  document.getElementById('pm_copyBtn').style.display='inline-block';
   document.getElementById('pm_title').value=s.title;
   document.getElementById('pm_note').value=s.note||'';
   document.getElementById('pm_start').value=toInput(s.start);
@@ -1012,6 +1037,27 @@ function openPMEdit(id){
   document.getElementById('personalModal').classList.add('open');
 }
 function closePM(){document.getElementById('personalModal').classList.remove('open');}
+
+// 📋 個人予定を複写
+function copyPM(){
+  const src=schedules.find(x=>x.id===editingPMId);if(!src)return;
+  closePM();
+  setTimeout(()=>{
+    openPersonalModal();
+    document.getElementById('pm_title').value=src.title;
+    document.getElementById('pm_note').value=src.note||'';
+    document.getElementById('pm_start').value=toInput(src.start);
+    const e2=new Date(src.end);
+    document.getElementById('pm_end').value=`${e2.getFullYear()}-${pad(e2.getMonth()+1)}-${pad(e2.getDate())}T${pad(e2.getHours())}:${pad(e2.getMinutes())}`;
+    document.getElementById('pm_person').innerHTML='<option value="">-- 未割当 --</option>'+persons.map(p=>`<option value="${p.id}" ${p.id===src.personId?'selected':''}>${p.name}（${p.role}）</option>`).join('');
+    document.getElementById('pm_notifOn').checked=src.notif;
+    document.getElementById('notifUI').style.display=src.notif?'block':'none';
+    document.getElementById('pm_notifMin').value=src.notifMin||15;
+    buildPMColorPicker(src.color||'#58a6ff');
+    document.getElementById('pm_title_hdr').textContent='個人予定を複写';
+    showToast('📋 複写しました。日時を変更して保存してください');
+  },120);
+}
 
 function buildPMColorPicker(selectedColor){
   pmColor=selectedColor;
