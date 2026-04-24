@@ -1187,35 +1187,6 @@ function onFMCustomColor(){
   document.querySelectorAll('#fm_colorRow .cpick').forEach(e=>e.classList.remove('selected'));
 }
 
-function saveFM(){
-  const title=document.getElementById('fm_title').value.trim();
-  if(!title){showToast('⚠ タイトルを入力してください');return;}
-  const startVal=document.getElementById('fm_start').value;
-  const endVal=document.getElementById('fm_end').value;
-  if(!startVal){showToast('⚠ 開始日を入力してください');return;}
-  const obj={
-    type:'factory',title,
-    product:'',
-    start:dateStrToISO(startVal),
-    end:dateStrToISO(endVal||startVal),
-    factoryId:document.getElementById('fm_factory').value,
-    personId:document.getElementById('fm_person').value||null,
-    color:fmColor,
-    mfgDate:document.getElementById('fm_mfg_date').value||'',
-    shipDate:document.getElementById('fm_ship_date').value||'',
-    shipColor:document.getElementById('fm_ship_color').value||'#bc8cff',
-    repeatId:null,notif:false,notifMin:15,note:'',
-  };
-  if(editingFMId){Object.assign(schedules.find(x=>x.id===editingFMId),obj);showToast('✅ 工場予定を更新しました');}
-  else{schedules.push({id:'s'+Date.now(),...obj});showToast('✅ 工場予定を追加しました');}
-  closeFM();renderSidebar();renderCalendar();
-}
-function deleteFM(){
-  if(!editingFMId)return;
-  schedules=schedules.filter(x=>x.id!==editingFMId);
-  closeFM();renderSidebar();renderCalendar();showToast('🗑 工場予定を削除しました');
-}
-
 // ══════════════════════════════
 // PERSONAL MODAL
 // ══════════════════════════════
