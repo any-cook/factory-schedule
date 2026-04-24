@@ -7,9 +7,9 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 :root{
-  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
-  --accent:#f0883e;--accent2:#58a6ff;--danger:#f85149;--success:#3fb950;
-  --text:#e6edf3;--text-muted:#7d8590;--text-dim:#484f58;
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f7fa;--border:#dde1e9;
+  --accent:#e07020;--accent2:#2176d2;--danger:#d93025;--success:#2e7d32;
+  --text:#1a1d23;--text-muted:#5f6470;--text-dim:#9fa4ae;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
@@ -198,20 +198,20 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:1
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-select option{background:#1c2128;}
+select option{background:#ffffff;color:#1a1d23;}
 /* 土曜・日曜カラー */
-.day-header.sat .dn{color:#58a6ff;}.day-header.sat .dd{color:#58a6ff;}
-.day-header.sun .dn{color:#f85149;}.day-header.sun .dd{color:#f85149;}
-.day-header.sat{background:rgba(88,166,255,.05);}
-.day-header.sun{background:rgba(248,81,73,.05);}
-.day-cell.sat{background:rgba(88,166,255,.025);}
-.day-cell.sun{background:rgba(248,81,73,.025);}
-.mcell.sat .mday-num{color:#58a6ff !important;}
-.mcell.sun .mday-num{color:#f85149 !important;}
-.mcell.sat{background:rgba(88,166,255,.03);}
-.mcell.sun{background:rgba(248,81,73,.03);}
-.mday-hdr.sat{color:#58a6ff;}
-.mday-hdr.sun{color:#f85149;}
+.day-header.sat .dn{color:#2176d2;}.day-header.sat .dd{color:#2176d2;}
+.day-header.sun .dn{color:#d93025;}.day-header.sun .dd{color:#d93025;}
+.day-header.sat{background:rgba(33,118,210,.07);}
+.day-header.sun{background:rgba(217,48,37,.07);}
+.day-cell.sat{background:rgba(33,118,210,.04);}
+.day-cell.sun{background:rgba(217,48,37,.04);}
+.mcell.sat .mday-num{color:#2176d2 !important;}
+.mcell.sun .mday-num{color:#d93025 !important;}
+.mcell.sat{background:rgba(33,118,210,.04);}
+.mcell.sun{background:rgba(217,48,37,.04);}
+.mday-hdr.sat{color:#2176d2;}
+.mday-hdr.sun{color:#d93025;}
 
 /* ─── 印刷スタイル ─── */
 @media print {
@@ -1306,7 +1306,7 @@ function renderPerson(area){
       ${days.map((d,i)=>{
         const isT=dOnly(d).getTime()===todayD.getTime();
         const dow=d.getDay();
-        const wkColor=dow===6?'#58a6ff':dow===0?'#f85149':'';
+        const wkColor=dow===6?'#2176d2':dow===0?'#d93025':'';
         const bgColor=dow===6?'rgba(88,166,255,.04)':dow===0?'rgba(248,81,73,.04)':'';
         return`<div style="text-align:center;padding:7px 3px;border-right:1px solid var(--border);${bgColor?'background:'+bgColor+';':''}">
           <div style="font-size:9px;color:${wkColor||'var(--text-muted)'};">${DN[i]}</div>
