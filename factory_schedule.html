@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工場スケジュール管理</title>
+<title>エニクック スケジュール</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 :root{
@@ -294,7 +294,7 @@ select option{background:#ffffff;color:#1a1d23;}
 <body>
 
 <header>
-  <div class="logo">🏭 <span>//</span> 工場スケジュール</div>
+  <div class="logo">🍳 <span>//</span> エニクック スケジュール</div>
   <div class="header-right">
     <div id="syncStatus" style="font-size:11px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);">
       <span id="syncDot" style="width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex-shrink:0;"></span>
@@ -1245,7 +1245,7 @@ function renderWeek(area){
       dayItems.forEach(s=>{
         const c=getColor(s);
         const bid=s._baseId||s.id;
-        html+=`<div onclick="openFMEdit('${bid}')" style="font-size:9px;padding:1px 4px;border-radius:3px;background:${c}30;color:${c};border-left:2px solid ${c};margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;">${s.title}</div>`;
+        html+=`<div onclick="openFMEdit('${bid}')" style="font-size:9px;padding:1px 4px;border-radius:3px;background:${c}30;color:#111111;border-left:2px solid ${c};margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;">${s.title}</div>`;
       });
       html+=`</div>`;
     });
@@ -1276,7 +1276,7 @@ function renderWeek(area){
     const isPersonal=s.type==='personal';
     const b=document.createElement('div');
     b.className='sch-block'+(isPersonal?' personal-stripe':'');
-    b.style.cssText=`top:${top}px;height:${ht}px;left:calc(${(di+1)/8*100}% + 2px);width:calc(${1/8*100}% - 5px);background:${c}24;border-color:${c};color:${c};`;
+    b.style.cssText=`top:${top}px;height:${ht}px;left:calc(${(di+1)/8*100}% + 2px);width:calc(${1/8*100}% - 5px);background:${c}24;border-color:${c};color:#111111;`;
     const p=persons.find(x=>x.id===s.personId);
     // 工場予定は時刻非表示
     let inner=`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>`;
@@ -1326,7 +1326,7 @@ function renderMonth(area){
         const openFn=isP?'openPMEdit':'openFMEdit';
         // 工場予定（製造日・発送日含む）は時刻なし・終日スタイル
         const showTime=isP&&!isShip&&!isMfg;
-        return`<div class="mevent ${isP&&!isShip&&!isMfg?'personal-stripe':''}" style="background:${c}${isShip?'33':'22'};color:${c};${isShip?'border-left:2px solid '+c+';':''}" onclick="event.stopPropagation();${openFn}('${bid}')">
+        return`<div class="mevent ${isP&&!isShip&&!isMfg?'personal-stripe':''}" style="background:${c}${isShip?'33':'22'};color:#111111;${isShip?'border-left:2px solid '+c+';':''}" onclick="event.stopPropagation();${openFn}('${bid}')">
           ${showTime?`<span class="mevent-time">${fmtT(s.start)}</span>`:''}
           ${s.repeatId&&!isShip&&!isMfg?'<span style="font-size:8px;opacity:.65;">↻</span>':''}
           ${isP&&!isShip&&!isMfg?'<span style="font-size:9px;">👤</span>':''}
@@ -1382,7 +1382,7 @@ function renderPerson(area){
       ${days.map(d=>{
         const ds=vis.filter(s=>s.personId===p.id&&dOnly(new Date(s.start)).getTime()===dOnly(d).getTime());
         return`<div class="pcell" onclick="openFMAt('${dtStr(d,9,0)}')">
-          ${ds.map(s=>{const c2=getColor(s);const isP=s.type==='personal';const bid=s._baseId||s._bid||s.id;return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c2}26;color:${c2};" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
+          ${ds.map(s=>{const c2=getColor(s);const isP=s.type==='personal';const bid=s._baseId||s._bid||s.id;return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c2}26;color:#111111;" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
             <span class="mevent-time">${fmtT(s.start)}</span>
             ${isP?'<span style="font-size:9px;">👤</span>':''}
             <span class="mevent-title">${s.title}</span>
@@ -1821,7 +1821,7 @@ function triggerNotif(s){
   const msg=`${p?.name||'担当者未割当'} — ${s.title}`;
   addNotif('🔔',msg,`${fmtT(s.start)} 開始 (${s.notifMin}分前)`);
   showToast(`🔔 ${msg}`);
-  if('Notification'in window&&Notification.permission==='granted')new Notification('工場スケジュール',{body:msg});
+  if('Notification'in window&&Notification.permission==='granted')new Notification('エニクック スケジュール',{body:msg});
 }
 function addNotif(icon,text,sub){
   notifications.unshift({id:'n'+Date.now(),icon,text,sub,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});
