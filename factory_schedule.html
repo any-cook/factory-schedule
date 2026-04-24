@@ -480,6 +480,7 @@ select option{background:#ffffff;color:#1a1d23;}
               <button class="rchip active" onclick="setFMRT('daily',this)">毎日</button>
               <button class="rchip" onclick="setFMRT('weekly',this)">毎週</button>
               <button class="rchip" onclick="setFMRT('monthly',this)">毎月</button>
+              <button class="rchip" onclick="setFMRT('monthly_nth',this)">毎月第N週</button>
               <button class="rchip" onclick="setFMRT('yearly',this)">毎年</button>
               <button class="rchip" onclick="setFMRT('custom',this)">カスタム</button>
             </div>
@@ -496,6 +497,29 @@ select option{background:#ffffff;color:#1a1d23;}
               <button class="wdbtn" data-d="0" onclick="toggleFMWD(0,this)">日</button>
             </div>
           </div>
+          <!-- 毎月第N週曜日 -->
+          <div id="fm_nthArea" style="display:none;">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:7px;">第N週・曜日を選択</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select id="fm_nthWeek" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:'Noto Sans JP',sans-serif;outline:none;">
+                <option value="1">第1週</option>
+                <option value="2">第2週</option>
+                <option value="3">第3週</option>
+                <option value="4">第4週</option>
+                <option value="-1">最終週</option>
+              </select>
+              <select id="fm_nthDay" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:'Noto Sans JP',sans-serif;outline:none;">
+                <option value="1">月曜日</option>
+                <option value="2">火曜日</option>
+                <option value="3">水曜日</option>
+                <option value="4">木曜日</option>
+                <option value="5">金曜日</option>
+                <option value="6">土曜日</option>
+                <option value="0">日曜日</option>
+              </select>
+            </div>
+            <div id="fm_nthPreview" style="font-size:11px;color:var(--accent);margin-top:6px;"></div>
+          </div>
           <div id="fm_custArea" style="display:none;">
             <div class="field-row3">
               <div class="field"><label>間隔</label><input id="fm_rint" type="number" min="1" max="99" value="1" style="text-align:center;"></div>
@@ -506,6 +530,10 @@ select option{background:#ffffff;color:#1a1d23;}
           <div class="field">
             <label>終了条件</label>
             <div style="display:flex;flex-direction:column;gap:7px;">
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                <input type="radio" name="fmrend" value="none" id="fm_rEndN" onchange="toggleFMREnd()" style="accent-color:var(--accent);">
+                なし（ずっと繰り返す）
+              </label>
               <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
                 <input type="radio" name="fmrend" value="count" id="fm_rEndC" checked onchange="toggleFMREnd()" style="accent-color:var(--accent);">
                 回数：<input id="fm_rcnt" type="number" min="1" max="365" value="12" style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 7px;font-size:12px;outline:none;"> 回
@@ -592,6 +620,7 @@ select option{background:#ffffff;color:#1a1d23;}
               <button class="rchip active" onclick="setRT('daily',this)">毎日</button>
               <button class="rchip" onclick="setRT('weekly',this)">毎週</button>
               <button class="rchip" onclick="setRT('monthly',this)">毎月</button>
+              <button class="rchip" onclick="setRT('monthly_nth',this)">毎月第N週</button>
               <button class="rchip" onclick="setRT('yearly',this)">毎年</button>
               <button class="rchip" onclick="setRT('custom',this)">カスタム</button>
             </div>
@@ -608,6 +637,29 @@ select option{background:#ffffff;color:#1a1d23;}
               <button class="wdbtn" data-d="0" onclick="toggleWD(0,this)">日</button>
             </div>
           </div>
+          <!-- 毎月第N週曜日 -->
+          <div id="pm_nthArea" style="display:none;">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:7px;">第N週・曜日を選択</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select id="pm_nthWeek" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:'Noto Sans JP',sans-serif;outline:none;">
+                <option value="1">第1週</option>
+                <option value="2">第2週</option>
+                <option value="3">第3週</option>
+                <option value="4">第4週</option>
+                <option value="-1">最終週</option>
+              </select>
+              <select id="pm_nthDay" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:'Noto Sans JP',sans-serif;outline:none;">
+                <option value="1">月曜日</option>
+                <option value="2">火曜日</option>
+                <option value="3">水曜日</option>
+                <option value="4">木曜日</option>
+                <option value="5">金曜日</option>
+                <option value="6">土曜日</option>
+                <option value="0">日曜日</option>
+              </select>
+            </div>
+            <div id="pm_nthPreview" style="font-size:11px;color:var(--accent2);margin-top:6px;"></div>
+          </div>
           <div id="custArea" style="display:none;">
             <div class="field-row3">
               <div class="field"><label>間隔</label><input id="pm_rint" type="number" min="1" max="99" value="1" style="text-align:center;"></div>
@@ -618,6 +670,10 @@ select option{background:#ffffff;color:#1a1d23;}
           <div class="field">
             <label>終了条件</label>
             <div style="display:flex;flex-direction:column;gap:7px;">
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                <input type="radio" name="rend" value="none" id="rEndN" onchange="toggleREnd()" style="accent-color:var(--accent2);">
+                なし（ずっと繰り返す）
+              </label>
               <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
                 <input type="radio" name="rend" value="count" id="rEndC" checked onchange="toggleREnd()" style="accent-color:var(--accent2);">
                 回数：<input id="pm_rcnt" type="number" min="1" max="365" value="12" style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 7px;font-size:12px;outline:none;"> 回
@@ -1163,26 +1219,58 @@ function expandSeries(base,series,rStart,rEnd){
   const bs=new Date(base.start);
   let cursor=new Date(bs);
   let count=0;
-  for(let iter=0;iter<500;iter++){
-    if(series.endMode==='count'&&count>=series.endCount)break;
-    if(series.endMode==='date'&&dOnly(cursor).getTime()>dOnly(new Date(series.endDate)).getTime())break;
+
+  function isEnded(d,cnt){
+    if(!series.endMode||series.endMode==='none')return false;
+    if(series.endMode==='count'&&cnt>=(series.endCount||12))return true;
+    if(series.endMode==='date'&&series.endDate&&dOnly(d).getTime()>dOnly(new Date(series.endDate)).getTime())return true;
+    return false;
+  }
+
+  function getNthWeekday(year,month,nth,dow){
+    nth=parseInt(nth);dow=parseInt(dow);
+    if(nth===-1){
+      const lastDay=new Date(year,month+1,0);
+      let d=lastDay.getDate();
+      while(new Date(year,month,d).getDay()!==dow)d--;
+      return new Date(year,month,d);
+    } else {
+      let d=1,found=0;
+      while(d<=31){
+        const dt=new Date(year,month,d);
+        if(dt.getMonth()!==month)break;
+        if(dt.getDay()===dow){found++;if(found===nth)return dt;}
+        d++;
+      }
+      return null;
+    }
+  }
+
+  for(let iter=0;iter<600;iter++){
+    if(isEnded(cursor,count))break;
     let dates=[];
-    if((series.type==='weekly'||series.type==='custom')&&series.weekdays&&series.weekdays.length>0){
+    if(series.type==='monthly_nth'){
+      const dt=getNthWeekday(cursor.getFullYear(),cursor.getMonth(),series.nthWeek,series.nthDay);
+      if(dt)dates=[dt];
+    } else if((series.type==='weekly'||series.type==='custom')&&series.weekdays&&series.weekdays.length>0){
       const ws=new Date(cursor);ws.setDate(ws.getDate()-((ws.getDay()+6)%7));
       for(let i=0;i<7;i++){const wd=addDays(ws,i);if(series.weekdays.includes(wd.getDay()))dates.push(wd);}
     } else dates=[cursor];
+
     for(const dt of dates){
-      if(series.endMode==='count'&&count>=series.endCount)break;
-      if(series.endMode==='date'&&dOnly(dt).getTime()>dOnly(new Date(series.endDate)).getTime())break;
+      if(isEnded(dt,count))break;
       const dtMs=dOnly(dt).getTime();
       if(dtMs>=dOnly(rStart).getTime()&&dtMs<=dOnly(rEnd).getTime()){
         const ns=new Date(dt);ns.setHours(bs.getHours(),bs.getMinutes(),0,0);
         const ne=new Date(ns.getTime()+dur);
-        instances.push({...base,id:base.id+'_'+dtMs,_bid:base.id,start:ns.toISOString(),end:ne.toISOString()});
+        instances.push({...base,id:base.id+'_'+dtMs,_baseId:base.id,_bid:base.id,start:ns.toISOString(),end:ne.toISOString()});
       }
       count++;
     }
-    if((series.type==='weekly'||series.type==='custom')&&series.weekdays&&series.weekdays.length>0){
+
+    if(series.type==='monthly_nth'){
+      cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);
+    } else if((series.type==='weekly'||series.type==='custom')&&series.weekdays&&series.weekdays.length>0){
       cursor.setDate(cursor.getDate()+7*(series.interval||1));
     } else {
       const c2=new Date(cursor);
@@ -1422,13 +1510,23 @@ function toggleFMRepeatUI(){document.getElementById('fm_repeatUI').style.display
 function setFMRT(t,el){fmRType=t;document.querySelectorAll('#fm_rchipRow .rchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');updateFMRTypeUI(t);}
 function updateFMRTypeUI(t){
   document.getElementById('fm_wdArea').style.display=(t==='weekly'||t==='custom')?'block':'none';
+  document.getElementById('fm_nthArea').style.display=t==='monthly_nth'?'block':'none';
   document.getElementById('fm_custArea').style.display=t==='custom'?'block':'none';
+  if(t==='monthly_nth')updateFMNthPreview();
+}
+function updateFMNthPreview(){
+  const week=document.getElementById('fm_nthWeek').value;
+  const day=document.getElementById('fm_nthDay').value;
+  const weekLabels={1:'第1週',2:'第2週',3:'第3週',4:'第4週','-1':'最終週'};
+  const dayLabels={0:'日曜日',1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日'};
+  document.getElementById('fm_nthPreview').textContent=
+    `→ 毎月 ${weekLabels[week]} ${dayLabels[day]} に繰り返します`;
 }
 function toggleFMWD(d,btn){const i=fmRWeekdays.indexOf(d);if(i===-1)fmRWeekdays.push(d);else fmRWeekdays.splice(i,1);btn.classList.toggle('active',fmRWeekdays.includes(d));}
 function toggleFMREnd(){
-  const isDate=document.getElementById('fm_rEndD').checked;
-  document.getElementById('fm_renddate').disabled=!isDate;
-  document.getElementById('fm_rcnt').disabled=isDate;
+  const v=document.querySelector('input[name="fmrend"]:checked')?.value;
+  document.getElementById('fm_renddate').disabled=(v!=='date');
+  document.getElementById('fm_rcnt').disabled=(v!=='count');
 }
 function toggleFMNotifUI(){document.getElementById('fm_notifUI').style.display=document.getElementById('fm_notifOn').checked?'block':'none';}
 
@@ -1441,7 +1539,9 @@ function resetFMRepeat(){
   document.getElementById('fm_rEndC').checked=true;
   toggleFMREnd();
   document.getElementById('fm_rcnt').value=12;
+  document.getElementById('fm_rcnt').disabled=false;
   document.getElementById('fm_renddate').value='';
+  document.getElementById('fm_renddate').disabled=true;
   document.querySelectorAll('#fm_wdArea .wdbtn').forEach(b=>b.classList.remove('active'));
 }
 
@@ -1483,11 +1583,17 @@ function openFMEdit(id){
       fmRType=sr.type;fmRWeekdays=[...(sr.weekdays||[])];
       document.getElementById('fm_repeatOn').checked=true;
       document.getElementById('fm_repeatUI').style.display='flex';
-      document.querySelectorAll('#fm_rchipRow .rchip').forEach(c=>c.classList.toggle('active',c.textContent===typeLabel(sr.type)));
+      document.querySelectorAll('#fm_rchipRow .rchip').forEach(c=>c.classList.toggle('active',c.textContent===typeLabel(sr.type)||(sr.type==='monthly_nth'&&c.textContent==='毎月第N週')));
       updateFMRTypeUI(sr.type);
       if(sr.type==='custom'){document.getElementById('fm_rint').value=sr.interval||1;document.getElementById('fm_runit').value=sr.unit||'day';}
+      if(sr.type==='monthly_nth'){
+        document.getElementById('fm_nthWeek').value=sr.nthWeek||1;
+        document.getElementById('fm_nthDay').value=sr.nthDay||1;
+        updateFMNthPreview();
+      }
       document.querySelectorAll('#fm_wdArea .wdbtn').forEach(b=>b.classList.toggle('active',fmRWeekdays.includes(parseInt(b.dataset.d))));
-      if(sr.endMode==='date'){document.getElementById('fm_rEndD').checked=true;document.getElementById('fm_renddate').value=sr.endDate||'';toggleFMREnd();}
+      if(sr.endMode==='none'){document.getElementById('fm_rEndN').checked=true;toggleFMREnd();}
+      else if(sr.endMode==='date'){document.getElementById('fm_rEndD').checked=true;document.getElementById('fm_renddate').value=sr.endDate||'';toggleFMREnd();}
       else{document.getElementById('fm_rEndC').checked=true;document.getElementById('fm_rcnt').value=sr.endCount||12;toggleFMREnd();}
     }
   }
@@ -1524,23 +1630,26 @@ function saveFM(){
   const isR=document.getElementById('fm_repeatOn').checked;
   let repeatId=null;
   if(isR){
-    const isDate=document.getElementById('fm_rEndD').checked;
+    const endV=document.querySelector('input[name="fmrend"]:checked')?.value||'count';
     const oldRepeatId=editingFMId?schedules.find(s=>s.id===editingFMId)?.repeatId:null;
-    if(oldRepeatId)repeatSeries=repeatSeries.filter(r=>r.id!==oldRepeatId);
+    if(oldRepeatId){repeatSeries=repeatSeries.filter(r=>r.id!==oldRepeatId);fbDelete('repeatSeries',oldRepeatId);}
     const sr={
       id:'r'+Date.now(),type:fmRType,
       interval:fmRType==='custom'?parseInt(document.getElementById('fm_rint').value)||1:1,
       unit:fmRType==='custom'?document.getElementById('fm_runit').value:'day',
       weekdays:[...fmRWeekdays],
-      endMode:isDate?'date':'count',
-      endCount:parseInt(document.getElementById('fm_rcnt').value)||12,
-      endDate:document.getElementById('fm_renddate').value,
+      nthWeek:fmRType==='monthly_nth'?parseInt(document.getElementById('fm_nthWeek').value):null,
+      nthDay:fmRType==='monthly_nth'?parseInt(document.getElementById('fm_nthDay').value):null,
+      endMode:endV,
+      endCount:endV==='count'?parseInt(document.getElementById('fm_rcnt').value)||12:null,
+      endDate:endV==='date'?document.getElementById('fm_renddate').value:null,
     };
     repeatSeries.push(sr);
     repeatId=sr.id;
+    fbSave('repeatSeries',sr.id,sr);
   } else if(editingFMId){
     const old=schedules.find(s=>s.id===editingFMId);
-    if(old?.repeatId)repeatSeries=repeatSeries.filter(r=>r.id!==old.repeatId);
+    if(old?.repeatId){fbDelete('repeatSeries',old.repeatId);repeatSeries=repeatSeries.filter(r=>r.id!==old.repeatId);}
   }
   const mfgVal=document.getElementById('fm_mfg_date').value||'';
   const shipVal=document.getElementById('fm_ship_date').value||'';
@@ -1663,11 +1772,18 @@ function openPMEdit(id){
     const sr=repeatSeries.find(r=>r.id===s.repeatId);
     if(sr){
       rType=sr.type;rWeekdays=[...(sr.weekdays||[])];
-      document.querySelectorAll('.rchip').forEach(c=>c.classList.toggle('active',c.textContent===typeLabel(sr.type)));
+      document.querySelectorAll('#rchipRow .rchip').forEach(c=>c.classList.toggle('active',
+        c.textContent===typeLabel(sr.type)||(sr.type==='monthly_nth'&&c.textContent==='毎月第N週')));
       updateRTypeUI(sr.type);
       if(sr.type==='custom'){document.getElementById('pm_rint').value=sr.interval||1;document.getElementById('pm_runit').value=sr.unit||'day';}
-      document.querySelectorAll('.wdbtn').forEach(b=>b.classList.toggle('active',rWeekdays.includes(parseInt(b.dataset.d))));
-      if(sr.endMode==='date'){document.getElementById('rEndD').checked=true;document.getElementById('pm_renddate').value=sr.endDate||'';toggleREnd();}
+      if(sr.type==='monthly_nth'){
+        document.getElementById('pm_nthWeek').value=sr.nthWeek||1;
+        document.getElementById('pm_nthDay').value=sr.nthDay||1;
+        updatePMNthPreview();
+      }
+      document.querySelectorAll('#wdArea .wdbtn').forEach(b=>b.classList.toggle('active',rWeekdays.includes(parseInt(b.dataset.d))));
+      if(sr.endMode==='none'){document.getElementById('rEndN').checked=true;toggleREnd();}
+      else if(sr.endMode==='date'){document.getElementById('rEndD').checked=true;document.getElementById('pm_renddate').value=sr.endDate||'';toggleREnd();}
       else{document.getElementById('rEndC').checked=true;document.getElementById('pm_rcnt').value=sr.endCount||12;toggleREnd();}
     }
   } else {
@@ -1721,19 +1837,29 @@ function onPMCustomColor(){
 }
 
 function toggleRepeatUI(){document.getElementById('repeatUI').style.display=document.getElementById('pm_repeatOn').checked?'flex':'none';}
-function setRT(t,el){rType=t;document.querySelectorAll('.rchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');updateRTypeUI(t);}
+function setRT(t,el){rType=t;document.querySelectorAll('#rchipRow .rchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');updateRTypeUI(t);}
 function updateRTypeUI(t){
   document.getElementById('wdArea').style.display=(t==='weekly'||t==='custom')?'block':'none';
+  document.getElementById('pm_nthArea').style.display=t==='monthly_nth'?'block':'none';
   document.getElementById('custArea').style.display=t==='custom'?'block':'none';
+  if(t==='monthly_nth')updatePMNthPreview();
+}
+function updatePMNthPreview(){
+  const week=document.getElementById('pm_nthWeek').value;
+  const day=document.getElementById('pm_nthDay').value;
+  const weekLabels={1:'第1週',2:'第2週',3:'第3週',4:'第4週','-1':'最終週'};
+  const dayLabels={0:'日曜日',1:'月曜日',2:'火曜日',3:'水曜日',4:'木曜日',5:'金曜日',6:'土曜日'};
+  document.getElementById('pm_nthPreview').textContent=
+    `→ 毎月 ${weekLabels[week]} ${dayLabels[day]} に繰り返します`;
 }
 function toggleWD(d,btn){const i=rWeekdays.indexOf(d);if(i===-1)rWeekdays.push(d);else rWeekdays.splice(i,1);btn.classList.toggle('active',rWeekdays.includes(d));}
 function toggleREnd(){
-  const isDate=document.getElementById('rEndD').checked;
-  document.getElementById('pm_renddate').disabled=!isDate;
-  document.getElementById('pm_rcnt').disabled=isDate;
+  const v=document.querySelector('input[name="rend"]:checked')?.value;
+  document.getElementById('pm_renddate').disabled=(v!=='date');
+  document.getElementById('pm_rcnt').disabled=(v!=='count');
 }
 function toggleNotifUI(){document.getElementById('notifUI').style.display=document.getElementById('pm_notifOn').checked?'block':'none';}
-function typeLabel(t){return{daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年',custom:'カスタム'}[t]||t;}
+function typeLabel(t){return{daily:'毎日',weekly:'毎週',monthly:'毎月',monthly_nth:'毎月第N週',yearly:'毎年',custom:'カスタム'}[t]||t;}
 
 function savePM(){
   const title=document.getElementById('pm_title').value.trim();
@@ -1741,23 +1867,26 @@ function savePM(){
   const isR=document.getElementById('pm_repeatOn').checked;
   let repeatId=null;
   if(isR){
-    const isDate=document.getElementById('rEndD').checked;
+    const endV=document.querySelector('input[name="rend"]:checked')?.value||'count';
     const oldRepeatId=editingPMId?schedules.find(s=>s.id===editingPMId)?.repeatId:null;
-    if(oldRepeatId)repeatSeries=repeatSeries.filter(r=>r.id!==oldRepeatId);
+    if(oldRepeatId){repeatSeries=repeatSeries.filter(r=>r.id!==oldRepeatId);fbDelete('repeatSeries',oldRepeatId);}
     const sr={
       id:'r'+Date.now(),type:rType,
       interval:rType==='custom'?parseInt(document.getElementById('pm_rint').value)||1:1,
       unit:rType==='custom'?document.getElementById('pm_runit').value:'day',
       weekdays:[...rWeekdays],
-      endMode:isDate?'date':'count',
-      endCount:parseInt(document.getElementById('pm_rcnt').value)||12,
-      endDate:document.getElementById('pm_renddate').value,
+      nthWeek:rType==='monthly_nth'?parseInt(document.getElementById('pm_nthWeek').value):null,
+      nthDay:rType==='monthly_nth'?parseInt(document.getElementById('pm_nthDay').value):null,
+      endMode:endV,
+      endCount:endV==='count'?parseInt(document.getElementById('pm_rcnt').value)||12:null,
+      endDate:endV==='date'?document.getElementById('pm_renddate').value:null,
     };
     repeatSeries.push(sr);
     repeatId=sr.id;
+    fbSave('repeatSeries',sr.id,sr);
   } else if(editingPMId){
     const old=schedules.find(s=>s.id===editingPMId);
-    if(old?.repeatId)repeatSeries=repeatSeries.filter(r=>r.id!==old.repeatId);
+    if(old?.repeatId){fbDelete('repeatSeries',old.repeatId);repeatSeries=repeatSeries.filter(r=>r.id!==old.repeatId);}
   }
   const obj={
     type:'personal',title,product:'',
