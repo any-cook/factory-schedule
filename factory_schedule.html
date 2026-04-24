@@ -305,10 +305,25 @@ select option{background:#1c2128;}
         </div>
       </div>
       <div class="msec">
-        <div class="msec-title">🗓 日時</div>
+        <div class="msec-title">🗓 日付</div>
         <div class="field-row">
-          <div class="field"><label>開始日時</label><input id="fm_start" type="datetime-local"></div>
-          <div class="field"><label>終了日時</label><input id="fm_end" type="datetime-local"></div>
+          <div class="field"><label>開始日</label><input id="fm_start" type="date"></div>
+          <div class="field"><label>終了日</label><input id="fm_end" type="date"></div>
+        </div>
+      </div>
+      <div class="msec">
+        <div class="msec-title">🏗 製造日・🚚 発送日</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">発送日はカレンダー上で別色（紫）で表示されます</div>
+        <div class="field-row">
+          <div class="field"><label>🏗 製造日</label><input id="fm_mfg_date" type="date"></div>
+          <div class="field">
+            <label>🚚 発送日</label>
+            <input id="fm_ship_date" type="date">
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+              <label style="font-size:11px;color:var(--text-muted);">発送日の色：</label>
+              <input type="color" id="fm_ship_color" value="#bc8cff" style="width:28px;height:22px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;padding:1px;">
+            </div>
+          </div>
         </div>
       </div>
       <div class="msec">
@@ -477,10 +492,10 @@ let persons=[
 ];
 // type: 'factory' | 'personal'
 let schedules=[
-  {id:'s1',type:'factory',title:'朝礼・点検',product:'',start:todayAt(8,0),end:todayAt(8,30),factoryId:'f1',personId:'p1',color:null,repeatId:null,notif:false,notifMin:15,note:''},
-  {id:'s2',type:'factory',title:'生産ライン稼働 / 自動車ドアパネル',product:'',start:todayAt(9,0),end:todayAt(12,0),factoryId:'f1',personId:'p2',color:null,repeatId:null,notif:false,notifMin:15,note:''},
-  {id:'s3',type:'factory',title:'安全講習',product:'',start:todayAt(14,0),end:todayAt(16,0),factoryId:'f2',personId:'p3',color:null,repeatId:null,notif:false,notifMin:15,note:'全員参加'},
-  {id:'s4',type:'personal',title:'月次ミーティング',product:'',start:todayAt(10,0),end:todayAt(11,0),factoryId:null,personId:'p1',color:'#58a6ff',repeatId:null,notif:true,notifMin:15,note:'資料持参'},
+  {id:'s1',type:'factory',title:'朝礼・点検',product:'',start:todayAt(8,0),end:todayAt(8,30),factoryId:'f1',personId:'p1',color:null,mfgDate:'',shipDate:'',shipColor:'#bc8cff',repeatId:null,notif:false,notifMin:15,note:''},
+  {id:'s2',type:'factory',title:'生産ライン稼働 / 自動車ドアパネル',product:'',start:todayAt(9,0),end:todayAt(12,0),factoryId:'f1',personId:'p2',color:null,mfgDate:todayDateStr(),shipDate:tomorrowDateStr(),shipColor:'#bc8cff',repeatId:null,notif:false,notifMin:15,note:''},
+  {id:'s3',type:'factory',title:'安全講習',product:'',start:todayAt(14,0),end:todayAt(16,0),factoryId:'f2',personId:'p3',color:null,mfgDate:'',shipDate:'',shipColor:'#bc8cff',repeatId:null,notif:false,notifMin:15,note:'全員参加'},
+  {id:'s4',type:'personal',title:'月次ミーティング',product:'',start:todayAt(10,0),end:todayAt(11,0),factoryId:null,personId:'p1',color:'#58a6ff',mfgDate:'',shipDate:'',shipColor:'#bc8cff',repeatId:null,notif:true,notifMin:15,note:'資料持参'},
 ];
 let repeatSeries=[];
 let notifications=[];
@@ -504,6 +519,10 @@ let rWeekdays=[];
 // ══════════════════════════════
 function todayAt(h,m){const d=new Date();d.setHours(h,m,0,0);return d.toISOString();}
 function tomorrowAt(h,m){const d=new Date();d.setDate(d.getDate()+1);d.setHours(h,m,0,0);return d.toISOString();}
+function todayDateStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function tomorrowDateStr(){const d=new Date();d.setDate(d.getDate()+1);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function toDateStr(iso){if(!iso)return'';const d=new Date(iso);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function dateStrToISO(s){if(!s)return'';return new Date(s+'T00:00:00').toISOString();}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function pad(n){return String(n).padStart(2,'0');}
 function toInput(iso){const d=new Date(iso);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
@@ -511,6 +530,8 @@ function dtStr(date,h,m){const d=new Date(date);d.setHours(h,m,0,0);return`${d.g
 function fmtT(iso){const d=new Date(iso);return`${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function dOnly(d){const r=new Date(d);r.setHours(0,0,0,0);return r;}
 function getColor(s){
+  if(s._kind==='ship')return s.shipColor||'#bc8cff';
+  if(s._kind==='mfg'){const fc=factories.find(f=>f.id===s.factoryId);return s.color||(fc?.color||'#f0883e');}
   if(s.type==='factory'){return s.color||(factories.find(f=>f.id===s.factoryId)?.color||'#f0883e');}
   return s.color||'#58a6ff';
 }
@@ -663,6 +684,24 @@ function getVisible(start,end){
     if(!s.repeatId){
       const sd=dOnly(new Date(s.start)).getTime();
       if(sd>=rs&&sd<=re)result.push(s);
+      // 工場予定の製造日を仮想エントリとして追加
+      if(s.type==='factory'&&s.mfgDate){
+        const md=dOnly(new Date(s.mfgDate+'T00:00:00')).getTime();
+        if(md>=rs&&md<=re){
+          result.push({...s,id:s.id+'_mfg',_baseId:s.id,_kind:'mfg',
+            start:s.mfgDate+'T00:00:00',end:s.mfgDate+'T00:00:00',
+            title:'🏗 '+s.title,color:getColor(s)});
+        }
+      }
+      // 工場予定の発送日を仮想エントリとして追加
+      if(s.type==='factory'&&s.shipDate){
+        const shd=dOnly(new Date(s.shipDate+'T00:00:00')).getTime();
+        if(shd>=rs&&shd<=re){
+          result.push({...s,id:s.id+'_ship',_baseId:s.id,_kind:'ship',
+            start:s.shipDate+'T00:00:00',end:s.shipDate+'T00:00:00',
+            title:'🚚 '+s.title,color:s.shipColor||'#bc8cff'});
+        }
+      }
     } else {
       const series=repeatSeries.find(r=>r.id===s.repeatId);
       if(series)result.push(...expandSeries(s,series,start,end));
@@ -732,35 +771,63 @@ function renderWeek(area){
   const DN=['月','火','水','木','金','土','日'];
   document.getElementById('dateLabel').textContent=`${ws.getFullYear()}年${ws.getMonth()+1}月${ws.getDate()}日〜`;
   const hours=Array.from({length:17},(_,i)=>i+7);
-  let html=`<div class="week-grid" id="wg"><div class="th-corner"></div>`;
+
+  // allday bar (製造日・発送日)
+  const vis=getVisible(ws,addDays(ws,6));
+  const alldayItems=vis.filter(s=>s._kind==='mfg'||s._kind==='ship');
+  const hasAllday=alldayItems.length>0;
+
+  let html=`<div class="week-grid" id="wg">`;
+  // corner
+  html+=`<div class="th-corner" style="${hasAllday?'grid-row:span 2;':''}"></div>`;
   days.forEach((d,i)=>{
     const isT=dOnly(d).getTime()===todayD.getTime();
     html+=`<div class="day-header ${isT?'today':''}"><div class="dn">${DN[i]}</div><div class="dd">${d.getDate()}</div></div>`;
   });
+
+  // allday row
+  if(hasAllday){
+    html+=`<div style="background:var(--surface);border-top:1px solid var(--border);border-right:1px solid var(--border);padding:3px 4px;font-size:9px;color:var(--text-muted);display:flex;align-items:center;">終日</div>`;
+    days.forEach(d=>{
+      const dayItems=alldayItems.filter(s=>dOnly(new Date(s.start)).getTime()===dOnly(d).getTime());
+      html+=`<div style="border-left:1px solid var(--border);border-top:1px solid var(--border);padding:2px;min-height:24px;background:var(--surface2);">`;
+      dayItems.forEach(s=>{
+        const c=getColor(s);
+        const bid=s._baseId||s.id;
+        html+=`<div onclick="openFMEdit('${bid}')" style="font-size:9px;padding:1px 4px;border-radius:3px;background:${c}30;color:${c};border-left:2px solid ${c};margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;">${s.title}</div>`;
+      });
+      html+=`</div>`;
+    });
+  }
+
   hours.forEach(h=>{
     html+=`<div class="time-label">${pad(h)}:00</div>`;
     days.forEach(d=>{html+=`<div class="day-cell" onclick="openFMAt('${dtStr(d,h,0)}')"></div>`;});
   });
   html+=`</div>`;area.innerHTML=html;
+
+  // Overlay time-based blocks (通常予定・個人予定のみ)
   const grid=document.getElementById('wg');
-  getVisible(ws,addDays(ws,6)).forEach(s=>{
+  vis.filter(s=>!s._kind).forEach(s=>{
     const sd=new Date(s.start),ed=new Date(s.end);
     const di=days.findIndex(d=>dOnly(d).getTime()===dOnly(sd).getTime());
     if(di===-1)return;
     const sh=sd.getHours()+sd.getMinutes()/60;
-    const eh=ed.getHours()+ed.getMinutes()/60;
-    const top=(sh-7)*46+34;const ht=Math.max((eh-sh)*46,16);
+    const eh=Math.max(ed.getHours()+ed.getMinutes()/60, sh+0.5);
+    const alldayOffset=hasAllday?24:0;
+    const top=(sh-7)*46+34+alldayOffset;
+    const ht=Math.max((eh-sh)*46,16);
     const c=getColor(s);
     const isPersonal=s.type==='personal';
     const b=document.createElement('div');
     b.className='sch-block'+(isPersonal?' personal-stripe':'');
     b.style.cssText=`top:${top}px;height:${ht}px;left:calc(${(di+1)/8*100}% + 2px);width:calc(${1/8*100}% - 5px);background:${c}24;border-color:${c};color:${c};`;
     const p=persons.find(x=>x.id===s.personId);
+    // 工場予定は時刻非表示
     let inner=`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>`;
     if(p)inner+=`<div class="bs">${p.name}</div>`;
-    if(s.product)inner+=`<div class="bs">📦 ${s.product}</div>`;
     b.innerHTML=inner;
-    const bid=s._bid||s.id;
+    const bid=s._baseId||s.id;
     b.onclick=(e)=>{e.stopPropagation();isPersonal?openPMEdit(bid):openFMEdit(bid);};
     grid.appendChild(b);
   });
@@ -792,13 +859,18 @@ function renderMonth(area){
       ${ds.slice(0,4).map(s=>{
         const c=getColor(s);
         const isP=s.type==='personal';
-        const bid=s._bid||s.id;
-        return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c}26;color:${c};" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
-          <span class="mevent-time">${fmtT(s.start)}</span>
-          ${s.repeatId?'<span style="font-size:8px;opacity:.65;">↻</span>':''}
-          ${isP?'<span style="font-size:9px;">👤</span>':''}
+        const isShip=s._kind==='ship';
+        const isMfg=s._kind==='mfg';
+        const bid=s._baseId||s._bid||s.id;
+        const openFn=isP?'openPMEdit':'openFMEdit';
+        // 工場予定（製造日・発送日含む）は時刻なし・終日スタイル
+        const showTime=isP&&!isShip&&!isMfg;
+        return`<div class="mevent ${isP&&!isShip&&!isMfg?'personal-stripe':''}" style="background:${c}${isShip?'33':'22'};color:${c};${isShip?'border-left:2px solid '+c+';':''}" onclick="event.stopPropagation();${openFn}('${bid}')">
+          ${showTime?`<span class="mevent-time">${fmtT(s.start)}</span>`:''}
+          ${s.repeatId&&!isShip&&!isMfg?'<span style="font-size:8px;opacity:.65;">↻</span>':''}
+          ${isP&&!isShip&&!isMfg?'<span style="font-size:9px;">👤</span>':''}
           <span class="mevent-title">${s.title}</span>
-        </div>${s.product?`<div class="mevent-product" style="color:${c};">📦 ${s.product}</div>`:''}`;
+        </div>`;
       }).join('')}
       ${ds.length>4?`<div style="font-size:9px;color:var(--text-muted);padding:1px 3px;">+${ds.length-4}件</div>`:''}
     </div>`;
@@ -840,7 +912,7 @@ function renderPerson(area){
       ${days.map(d=>{
         const ds=vis.filter(s=>s.personId===p.id&&dOnly(new Date(s.start)).getTime()===dOnly(d).getTime());
         return`<div class="pcell" onclick="openFMAt('${dtStr(d,9,0)}')">
-          ${ds.map(s=>{const c2=getColor(s);const isP=s.type==='personal';const bid=s._bid||s.id;return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c2}26;color:${c2};" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
+          ${ds.map(s=>{const c2=getColor(s);const isP=s.type==='personal';const bid=s._baseId||s._bid||s.id;return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c2}26;color:${c2};" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
             <span class="mevent-time">${fmtT(s.start)}</span>
             ${isP?'<span style="font-size:9px;">👤</span>':''}
             <span class="mevent-title">${s.title}</span>
@@ -872,24 +944,32 @@ function selectCPick(containerId, color){
 // ══════════════════════════════
 // FACTORY MODAL
 // ══════════════════════════════
+// ══════════════════════════════
+// FACTORY MODAL
+// ══════════════════════════════
 function openFactoryModal(){
   editingFMId=null;fmColor=null;
   document.getElementById('fmTitle').textContent='工場予定を追加';
   document.getElementById('fm_delBtn').style.display='none';
   document.getElementById('fm_copyBtn').style.display='none';
   document.getElementById('fm_title').value='';
-  const now=new Date();
-  document.getElementById('fm_start').value=dtStr(now,now.getHours(),0);
-  document.getElementById('fm_end').value=dtStr(now,now.getHours()+1,0);
+  document.getElementById('fm_mfg_date').value='';
+  document.getElementById('fm_ship_date').value='';
+  document.getElementById('fm_ship_color').value='#bc8cff';
+  const today=toDateStr(new Date().toISOString());
+  document.getElementById('fm_start').value=today;
+  document.getElementById('fm_end').value=today;
   populateFMSelects(selectedFactoryId||factories[0]?.id,null);
   buildFMColorPicker(null);
   document.getElementById('factoryModal').classList.add('open');
 }
 function openFMAt(dt){
   openFactoryModal();
-  document.getElementById('fm_start').value=dt;
-  const e2=new Date(dt);e2.setHours(e2.getHours()+1);
-  document.getElementById('fm_end').value=`${e2.getFullYear()}-${pad(e2.getMonth()+1)}-${pad(e2.getDate())}T${pad(e2.getHours())}:${pad(e2.getMinutes())}`;
+  // dtはdatetime-local形式かdate形式のどちらでも対応
+  const d=new Date(dt);
+  const ds=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  document.getElementById('fm_start').value=ds;
+  document.getElementById('fm_end').value=ds;
 }
 function openFMEdit(id){
   const s=schedules.find(x=>x.id===id);if(!s||s.type!=='factory')return;
@@ -898,8 +978,11 @@ function openFMEdit(id){
   document.getElementById('fm_delBtn').style.display='inline-block';
   document.getElementById('fm_copyBtn').style.display='inline-block';
   document.getElementById('fm_title').value=s.title;
-  document.getElementById('fm_start').value=toInput(s.start);
-  document.getElementById('fm_end').value=toInput(s.end);
+  document.getElementById('fm_start').value=toDateStr(s.start);
+  document.getElementById('fm_end').value=toDateStr(s.end);
+  document.getElementById('fm_mfg_date').value=s.mfgDate||'';
+  document.getElementById('fm_ship_date').value=s.shipDate||'';
+  document.getElementById('fm_ship_color').value=s.shipColor||'#bc8cff';
   populateFMSelects(s.factoryId,s.personId);
   buildFMColorPicker(s.color);
   document.getElementById('factoryModal').classList.add('open');
@@ -910,17 +993,18 @@ function closeFM(){document.getElementById('factoryModal').classList.remove('ope
 function copyFM(){
   const src=schedules.find(x=>x.id===editingFMId);if(!src)return;
   closeFM();
-  // 少し待ってから新規モードで開く
   setTimeout(()=>{
     openFactoryModal();
     document.getElementById('fm_title').value=src.title;
-    document.getElementById('fm_start').value=toInput(src.start);
-    const e2=new Date(src.end);
-    document.getElementById('fm_end').value=`${e2.getFullYear()}-${pad(e2.getMonth()+1)}-${pad(e2.getDate())}T${pad(e2.getHours())}:${pad(e2.getMinutes())}`;
+    document.getElementById('fm_start').value=toDateStr(src.start);
+    document.getElementById('fm_end').value=toDateStr(src.end);
+    document.getElementById('fm_mfg_date').value=src.mfgDate||'';
+    document.getElementById('fm_ship_date').value=src.shipDate||'';
+    document.getElementById('fm_ship_color').value=src.shipColor||'#bc8cff';
     populateFMSelects(src.factoryId,src.personId);
     buildFMColorPicker(src.color);
     document.getElementById('fmTitle').textContent='工場予定を複写';
-    showToast('📋 複写しました。日時を変更して保存してください');
+    showToast('📋 複写しました。日付を変更して保存してください');
   },120);
 }
 
@@ -953,14 +1037,20 @@ function onFMCustomColor(){
 function saveFM(){
   const title=document.getElementById('fm_title').value.trim();
   if(!title){showToast('⚠ タイトルを入力してください');return;}
+  const startVal=document.getElementById('fm_start').value;
+  const endVal=document.getElementById('fm_end').value;
+  if(!startVal){showToast('⚠ 開始日を入力してください');return;}
   const obj={
     type:'factory',title,
-    product:'', // タイトルフィールドに統合済み
-    start:new Date(document.getElementById('fm_start').value).toISOString(),
-    end:new Date(document.getElementById('fm_end').value).toISOString(),
+    product:'',
+    start:dateStrToISO(startVal),
+    end:dateStrToISO(endVal||startVal),
     factoryId:document.getElementById('fm_factory').value,
     personId:document.getElementById('fm_person').value||null,
     color:fmColor,
+    mfgDate:document.getElementById('fm_mfg_date').value||'',
+    shipDate:document.getElementById('fm_ship_date').value||'',
+    shipColor:document.getElementById('fm_ship_color').value||'#bc8cff',
     repeatId:null,notif:false,notifMin:15,note:'',
   };
   if(editingFMId){Object.assign(schedules.find(x=>x.id===editingFMId),obj);showToast('✅ 工場予定を更新しました');}
