@@ -298,22 +298,14 @@ select option{background:#1c2128;}
           <div class="field">
             <label>タイトル・製造商品 *</label>
             <input id="fm_title" placeholder="例：生産ライン稼働 / 自動車ドアパネル">
-            <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">タイトルと製造商品を「 / 」や「　」で区切って入力できます</div>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">タイトルと製造商品を「 / 」で区切って入力できます</div>
           </div>
           <div class="field"><label>工場 *</label><select id="fm_factory"></select></div>
-          <div class="field"><label>担当者</label><select id="fm_person"></select></div>
-        </div>
-      </div>
-      <div class="msec">
-        <div class="msec-title">🗓 日付</div>
-        <div class="field-row">
-          <div class="field"><label>開始日</label><input id="fm_start" type="date"></div>
-          <div class="field"><label>終了日</label><input id="fm_end" type="date"></div>
         </div>
       </div>
       <div class="msec">
         <div class="msec-title">🏗 製造日・🚚 発送日</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">発送日はカレンダー上で別色（紫）で表示されます</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">発送日はカレンダー上で別色で表示されます</div>
         <div class="field-row">
           <div class="field"><label>🏗 製造日</label><input id="fm_mfg_date" type="date"></div>
           <div class="field">
@@ -333,6 +325,74 @@ select option{background:#1c2128;}
         <div class="custom-color-wrap">
           <label>カスタム色：</label>
           <input type="color" id="fm_customColor" value="#f0883e" oninput="onFMCustomColor()">
+        </div>
+      </div>
+      <div class="msec">
+        <div class="msec-title">🔁 繰り返し設定</div>
+        <div class="toggle-row" style="margin-bottom:11px;">
+          <span>繰り返しを有効にする</span>
+          <label class="tsw"><input type="checkbox" id="fm_repeatOn" onchange="toggleFMRepeatUI()"><div class="tslider"></div></label>
+        </div>
+        <div id="fm_repeatUI" style="display:none;flex-direction:column;gap:11px;">
+          <div class="field">
+            <label>繰り返しの種類</label>
+            <div class="rchips" id="fm_rchipRow">
+              <button class="rchip active" onclick="setFMRT('daily',this)">毎日</button>
+              <button class="rchip" onclick="setFMRT('weekly',this)">毎週</button>
+              <button class="rchip" onclick="setFMRT('monthly',this)">毎月</button>
+              <button class="rchip" onclick="setFMRT('yearly',this)">毎年</button>
+              <button class="rchip" onclick="setFMRT('custom',this)">カスタム</button>
+            </div>
+          </div>
+          <div id="fm_wdArea" style="display:none;">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:7px;">繰り返す曜日</label>
+            <div class="wdpicker">
+              <button class="wdbtn" data-d="1" onclick="toggleFMWD(1,this)">月</button>
+              <button class="wdbtn" data-d="2" onclick="toggleFMWD(2,this)">火</button>
+              <button class="wdbtn" data-d="3" onclick="toggleFMWD(3,this)">水</button>
+              <button class="wdbtn" data-d="4" onclick="toggleFMWD(4,this)">木</button>
+              <button class="wdbtn" data-d="5" onclick="toggleFMWD(5,this)">金</button>
+              <button class="wdbtn" data-d="6" onclick="toggleFMWD(6,this)">土</button>
+              <button class="wdbtn" data-d="0" onclick="toggleFMWD(0,this)">日</button>
+            </div>
+          </div>
+          <div id="fm_custArea" style="display:none;">
+            <div class="field-row3">
+              <div class="field"><label>間隔</label><input id="fm_rint" type="number" min="1" max="99" value="1" style="text-align:center;"></div>
+              <div class="field"><label>単位</label><select id="fm_runit"><option value="day">日ごと</option><option value="week">週ごと</option><option value="month">月ごと</option></select></div>
+              <div></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>終了条件</label>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                <input type="radio" name="fmrend" value="count" id="fm_rEndC" checked onchange="toggleFMREnd()" style="accent-color:var(--accent);">
+                回数：<input id="fm_rcnt" type="number" min="1" max="365" value="12" style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 7px;font-size:12px;outline:none;"> 回
+              </label>
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                <input type="radio" name="fmrend" value="date" id="fm_rEndD" onchange="toggleFMREnd()" style="accent-color:var(--accent);">
+                日付：<input id="fm_renddate" type="date" disabled style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 7px;font-size:12px;outline:none;">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="msec">
+        <div class="msec-title">🔔 通知設定</div>
+        <div class="toggle-row">
+          <span>通知を有効にする</span>
+          <label class="tsw"><input type="checkbox" id="fm_notifOn" onchange="toggleFMNotifUI()"><div class="tslider"></div></label>
+        </div>
+        <div id="fm_notifUI" style="display:none;margin-top:11px;">
+          <div class="field"><label>通知タイミング</label>
+            <select id="fm_notifMin">
+              <option value="5">5分前</option><option value="10">10分前</option>
+              <option value="15" selected>15分前</option><option value="30">30分前</option>
+              <option value="60">1時間前</option><option value="120">2時間前</option>
+              <option value="1440">1日前</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -944,9 +1004,37 @@ function selectCPick(containerId, color){
 // ══════════════════════════════
 // FACTORY MODAL
 // ══════════════════════════════
-// ══════════════════════════════
-// FACTORY MODAL
-// ══════════════════════════════
+// 工場モーダル専用の繰り返し状態
+let fmRType='daily';
+let fmRWeekdays=[];
+
+function toggleFMRepeatUI(){document.getElementById('fm_repeatUI').style.display=document.getElementById('fm_repeatOn').checked?'flex':'none';}
+function setFMRT(t,el){fmRType=t;document.querySelectorAll('#fm_rchipRow .rchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');updateFMRTypeUI(t);}
+function updateFMRTypeUI(t){
+  document.getElementById('fm_wdArea').style.display=(t==='weekly'||t==='custom')?'block':'none';
+  document.getElementById('fm_custArea').style.display=t==='custom'?'block':'none';
+}
+function toggleFMWD(d,btn){const i=fmRWeekdays.indexOf(d);if(i===-1)fmRWeekdays.push(d);else fmRWeekdays.splice(i,1);btn.classList.toggle('active',fmRWeekdays.includes(d));}
+function toggleFMREnd(){
+  const isDate=document.getElementById('fm_rEndD').checked;
+  document.getElementById('fm_renddate').disabled=!isDate;
+  document.getElementById('fm_rcnt').disabled=isDate;
+}
+function toggleFMNotifUI(){document.getElementById('fm_notifUI').style.display=document.getElementById('fm_notifOn').checked?'block':'none';}
+
+function resetFMRepeat(){
+  fmRType='daily';fmRWeekdays=[];
+  document.getElementById('fm_repeatOn').checked=false;
+  document.getElementById('fm_repeatUI').style.display='none';
+  document.querySelectorAll('#fm_rchipRow .rchip').forEach((c,i)=>c.classList.toggle('active',i===0));
+  updateFMRTypeUI('daily');
+  document.getElementById('fm_rEndC').checked=true;
+  toggleFMREnd();
+  document.getElementById('fm_rcnt').value=12;
+  document.getElementById('fm_renddate').value='';
+  document.querySelectorAll('#fm_wdArea .wdbtn').forEach(b=>b.classList.remove('active'));
+}
+
 function openFactoryModal(){
   editingFMId=null;fmColor=null;
   document.getElementById('fmTitle').textContent='工場予定を追加';
@@ -956,21 +1044,14 @@ function openFactoryModal(){
   document.getElementById('fm_mfg_date').value='';
   document.getElementById('fm_ship_date').value='';
   document.getElementById('fm_ship_color').value='#bc8cff';
-  const today=toDateStr(new Date().toISOString());
-  document.getElementById('fm_start').value=today;
-  document.getElementById('fm_end').value=today;
-  populateFMSelects(selectedFactoryId||factories[0]?.id,null);
+  document.getElementById('fm_notifOn').checked=false;
+  document.getElementById('fm_notifUI').style.display='none';
+  resetFMRepeat();
   buildFMColorPicker(null);
+  document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===(selectedFactoryId||factories[0]?.id)?'selected':''}>${f.name}</option>`).join('');
   document.getElementById('factoryModal').classList.add('open');
 }
-function openFMAt(dt){
-  openFactoryModal();
-  // dtはdatetime-local形式かdate形式のどちらでも対応
-  const d=new Date(dt);
-  const ds=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  document.getElementById('fm_start').value=ds;
-  document.getElementById('fm_end').value=ds;
-}
+function openFMAt(dt){openFactoryModal();}
 function openFMEdit(id){
   const s=schedules.find(x=>x.id===id);if(!s||s.type!=='factory')return;
   editingFMId=id;fmColor=s.color;
@@ -978,13 +1059,30 @@ function openFMEdit(id){
   document.getElementById('fm_delBtn').style.display='inline-block';
   document.getElementById('fm_copyBtn').style.display='inline-block';
   document.getElementById('fm_title').value=s.title;
-  document.getElementById('fm_start').value=toDateStr(s.start);
-  document.getElementById('fm_end').value=toDateStr(s.end);
   document.getElementById('fm_mfg_date').value=s.mfgDate||'';
   document.getElementById('fm_ship_date').value=s.shipDate||'';
   document.getElementById('fm_ship_color').value=s.shipColor||'#bc8cff';
-  populateFMSelects(s.factoryId,s.personId);
+  document.getElementById('fm_notifOn').checked=s.notif||false;
+  document.getElementById('fm_notifUI').style.display=(s.notif)?'block':'none';
+  document.getElementById('fm_notifMin').value=s.notifMin||15;
+  // repeat
+  resetFMRepeat();
+  if(s.repeatId){
+    const sr=repeatSeries.find(r=>r.id===s.repeatId);
+    if(sr){
+      fmRType=sr.type;fmRWeekdays=[...(sr.weekdays||[])];
+      document.getElementById('fm_repeatOn').checked=true;
+      document.getElementById('fm_repeatUI').style.display='flex';
+      document.querySelectorAll('#fm_rchipRow .rchip').forEach(c=>c.classList.toggle('active',c.textContent===typeLabel(sr.type)));
+      updateFMRTypeUI(sr.type);
+      if(sr.type==='custom'){document.getElementById('fm_rint').value=sr.interval||1;document.getElementById('fm_runit').value=sr.unit||'day';}
+      document.querySelectorAll('#fm_wdArea .wdbtn').forEach(b=>b.classList.toggle('active',fmRWeekdays.includes(parseInt(b.dataset.d))));
+      if(sr.endMode==='date'){document.getElementById('fm_rEndD').checked=true;document.getElementById('fm_renddate').value=sr.endDate||'';toggleFMREnd();}
+      else{document.getElementById('fm_rEndC').checked=true;document.getElementById('fm_rcnt').value=sr.endCount||12;toggleFMREnd();}
+    }
+  }
   buildFMColorPicker(s.color);
+  document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===s.factoryId?'selected':''}>${f.name}</option>`).join('');
   document.getElementById('factoryModal').classList.add('open');
 }
 function closeFM(){document.getElementById('factoryModal').classList.remove('open');}
@@ -996,23 +1094,78 @@ function copyFM(){
   setTimeout(()=>{
     openFactoryModal();
     document.getElementById('fm_title').value=src.title;
-    document.getElementById('fm_start').value=toDateStr(src.start);
-    document.getElementById('fm_end').value=toDateStr(src.end);
     document.getElementById('fm_mfg_date').value=src.mfgDate||'';
     document.getElementById('fm_ship_date').value=src.shipDate||'';
     document.getElementById('fm_ship_color').value=src.shipColor||'#bc8cff';
-    populateFMSelects(src.factoryId,src.personId);
+    document.getElementById('fm_notifOn').checked=src.notif||false;
+    document.getElementById('fm_notifUI').style.display=(src.notif)?'block':'none';
+    document.getElementById('fm_notifMin').value=src.notifMin||15;
+    document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===src.factoryId?'selected':''}>${f.name}</option>`).join('');
     buildFMColorPicker(src.color);
     document.getElementById('fmTitle').textContent='工場予定を複写';
-    showToast('📋 複写しました。日付を変更して保存してください');
+    showToast('📋 複写しました。必要な項目を変更して保存してください');
   },120);
 }
 
-function populateFMSelects(fid,pid){
-  document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===fid?'selected':''}>${f.name}</option>`).join('');
-  document.getElementById('fm_person').innerHTML='<option value="">-- 未割当 --</option>'+persons.map(p=>`<option value="${p.id}" ${p.id===pid?'selected':''}>${p.name}（${p.role}）</option>`).join('');
+function saveFM(){
+  const title=document.getElementById('fm_title').value.trim();
+  if(!title){showToast('⚠ タイトルを入力してください');return;}
+  // 繰り返し処理
+  const isR=document.getElementById('fm_repeatOn').checked;
+  let repeatId=null;
+  if(isR){
+    const isDate=document.getElementById('fm_rEndD').checked;
+    const oldRepeatId=editingFMId?schedules.find(s=>s.id===editingFMId)?.repeatId:null;
+    if(oldRepeatId)repeatSeries=repeatSeries.filter(r=>r.id!==oldRepeatId);
+    const sr={
+      id:'r'+Date.now(),type:fmRType,
+      interval:fmRType==='custom'?parseInt(document.getElementById('fm_rint').value)||1:1,
+      unit:fmRType==='custom'?document.getElementById('fm_runit').value:'day',
+      weekdays:[...fmRWeekdays],
+      endMode:isDate?'date':'count',
+      endCount:parseInt(document.getElementById('fm_rcnt').value)||12,
+      endDate:document.getElementById('fm_renddate').value,
+    };
+    repeatSeries.push(sr);
+    repeatId=sr.id;
+  } else if(editingFMId){
+    const old=schedules.find(s=>s.id===editingFMId);
+    if(old?.repeatId)repeatSeries=repeatSeries.filter(r=>r.id!==old.repeatId);
+  }
+  const now=new Date().toISOString();
+  const obj={
+    type:'factory',title,
+    product:'',
+    start:now,end:now,
+    factoryId:document.getElementById('fm_factory').value,
+    personId:null,
+    color:fmColor,
+    mfgDate:document.getElementById('fm_mfg_date').value||'',
+    shipDate:document.getElementById('fm_ship_date').value||'',
+    shipColor:document.getElementById('fm_ship_color').value||'#bc8cff',
+    repeatId,
+    notif:document.getElementById('fm_notifOn').checked,
+    notifMin:parseInt(document.getElementById('fm_notifMin').value)||15,
+    note:'',
+  };
+  if(editingFMId){Object.assign(schedules.find(x=>x.id===editingFMId),obj);showToast('✅ 工場予定を更新しました');}
+  else{schedules.push({id:'s'+Date.now(),...obj});showToast('✅ 工場予定を追加しました'+(isR?' (繰り返し)':''));}
+  closeFM();scheduleNotifs();renderSidebar();renderCalendar();
 }
-
+function deleteFM(){
+  if(!editingFMId)return;
+  const s=schedules.find(x=>x.id===editingFMId);
+  if(s?.repeatId){
+    showConfirm('🔁','繰り返し予定を削除','全ての繰り返し分が削除されます。',()=>{
+      repeatSeries=repeatSeries.filter(r=>r.id!==s.repeatId);
+      schedules=schedules.filter(x=>x.id!==editingFMId);
+      closeFM();scheduleNotifs();renderSidebar();renderCalendar();showToast('🗑 繰り返し予定を削除しました');
+    });
+  } else {
+    schedules=schedules.filter(x=>x.id!==editingFMId);
+    closeFM();renderSidebar();renderCalendar();showToast('🗑 工場予定を削除しました');
+  }
+}
 function buildFMColorPicker(selectedColor){
   fmColor=selectedColor;
   const row=document.getElementById('fm_colorRow');
