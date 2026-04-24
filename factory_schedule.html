@@ -742,25 +742,38 @@ function getVisible(start,end){
   const result=[];
   filteredBase().forEach(s=>{
     if(!s.repeatId){
-      const sd=dOnly(new Date(s.start)).getTime();
-      if(sd>=rs&&sd<=re)result.push(s);
-      // 工場予定の製造日を仮想エントリとして追加
-      if(s.type==='factory'&&s.mfgDate){
-        const md=dOnly(new Date(s.mfgDate+'T00:00:00')).getTime();
-        if(md>=rs&&md<=re){
-          result.push({...s,id:s.id+'_mfg',_baseId:s.id,_kind:'mfg',
-            start:s.mfgDate+'T00:00:00',end:s.mfgDate+'T00:00:00',
-            title:'🏗 '+s.title,color:getColor(s)});
+      // 工場予定：製造日・発送日どちらもない場合のみ本体をstart日で表示
+      // 製造日か発送日があれば、それぞれ仮想エントリで表示（本体は非表示）
+      if(s.type==='factory'){
+        const hasMfg=!!s.mfgDate;
+        const hasShip=!!s.shipDate;
+        // 製造日も発送日もない場合 → 本体を登録日として表示
+        if(!hasMfg&&!hasShip){
+          const sd=dOnly(new Date(s.start)).getTime();
+          if(sd>=rs&&sd<=re)result.push(s);
         }
-      }
-      // 工場予定の発送日を仮想エントリとして追加
-      if(s.type==='factory'&&s.shipDate){
-        const shd=dOnly(new Date(s.shipDate+'T00:00:00')).getTime();
-        if(shd>=rs&&shd<=re){
-          result.push({...s,id:s.id+'_ship',_baseId:s.id,_kind:'ship',
-            start:s.shipDate+'T00:00:00',end:s.shipDate+'T00:00:00',
-            title:'🚚 '+s.title,color:s.shipColor||'#bc8cff'});
+        // 製造日の仮想エントリ
+        if(hasMfg){
+          const md=dOnly(new Date(s.mfgDate+'T00:00:00')).getTime();
+          if(md>=rs&&md<=re){
+            result.push({...s,id:s.id+'_mfg',_baseId:s.id,_kind:'mfg',
+              start:s.mfgDate+'T00:00:00',end:s.mfgDate+'T00:00:00',
+              title:'🏗 '+s.title,color:getColor(s)});
+          }
         }
+        // 発送日の仮想エントリ
+        if(hasShip){
+          const shd=dOnly(new Date(s.shipDate+'T00:00:00')).getTime();
+          if(shd>=rs&&shd<=re){
+            result.push({...s,id:s.id+'_ship',_baseId:s.id,_kind:'ship',
+              start:s.shipDate+'T00:00:00',end:s.shipDate+'T00:00:00',
+              title:'🚚 '+s.title,color:s.shipColor||'#bc8cff'});
+          }
+        }
+      } else {
+        // 個人予定は通常通り表示
+        const sd=dOnly(new Date(s.start)).getTime();
+        if(sd>=rs&&sd<=re)result.push(s);
       }
     } else {
       const series=repeatSeries.find(r=>r.id===s.repeatId);
@@ -1132,7 +1145,11 @@ function saveFM(){
     const old=schedules.find(s=>s.id===editingFMId);
     if(old?.repeatId)repeatSeries=repeatSeries.filter(r=>r.id!==old.repeatId);
   }
-  const now=new Date().toISOString();
+  const mfgVal=document.getElementById('fm_mfg_date').value||'';
+  const shipVal=document.getElementById('fm_ship_date').value||'';
+  // startは製造日→発送日→今日の順で設定（カレンダー表示の基準）
+  const baseDate=mfgVal||shipVal||todayDateStr();
+  const now=dateStrToISO(baseDate);
   const obj={
     type:'factory',title,
     product:'',
@@ -1140,8 +1157,8 @@ function saveFM(){
     factoryId:document.getElementById('fm_factory').value,
     personId:null,
     color:fmColor,
-    mfgDate:document.getElementById('fm_mfg_date').value||'',
-    shipDate:document.getElementById('fm_ship_date').value||'',
+    mfgDate:mfgVal,
+    shipDate:shipVal,
     shipColor:document.getElementById('fm_ship_color').value||'#bc8cff',
     repeatId,
     notif:document.getElementById('fm_notifOn').checked,
