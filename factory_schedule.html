@@ -9,7 +9,7 @@
 :root{
   --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f7fa;--border:#dde1e9;
   --accent:#e07020;--accent2:#2176d2;--danger:#d93025;--success:#2e7d32;
-  --text:#1a1d23;--text-muted:#5f6470;--text-dim:#9fa4ae;
+  --text:#111111;--text-muted:#333333;--text-dim:#555555;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
@@ -199,7 +199,32 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:1
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 select option{background:#ffffff;color:#1a1d23;}
-/* 土曜・日曜カラー */
+/* ─── カレンダー文字を黒に統一 ─── */
+.calendar-area,
+.calendar-area *:not(.sch-block):not(.sch-block *):not(.mevent):not(.mevent *){
+  color:#111111;
+}
+/* 週ビュー */
+.day-header .dn{color:#444444 !important;}
+.day-header .dd{color:#111111 !important;}
+.day-header.today .dd{color:var(--accent) !important;}
+.time-label{color:#666666 !important;}
+/* 月ビュー */
+.mday-hdr{color:#444444 !important;}
+.mday-num{color:#111111 !important;}
+.mcell.today .mday-num{color:var(--accent) !important;}
+/* 土日は色維持 */
+.day-header.sat .dn,.day-header.sat .dd{color:#2176d2 !important;}
+.day-header.sun .dn,.day-header.sun .dd{color:#d93025 !important;}
+.mday-hdr.sat{color:#2176d2 !important;}
+.mday-hdr.sun{color:#d93025 !important;}
+.mcell.sat .mday-num{color:#2176d2 !important;}
+.mcell.sun .mday-num{color:#d93025 !important;}
+/* ツールバー日付ラベル */
+.date-label{color:#111111 !important;}
+/* 人別ビュー担当者名・役職 */
+.plabel{color:#111111;}
+.plabel div{color:#111111 !important;}
 .day-header.sat .dn{color:#2176d2;}.day-header.sat .dd{color:#2176d2;}
 .day-header.sun .dn{color:#d93025;}.day-header.sun .dd{color:#d93025;}
 .day-header.sat{background:rgba(33,118,210,.07);}
@@ -648,8 +673,8 @@ select option{background:#ffffff;color:#1a1d23;}
 </div>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" onerror="console.warn('Firebase app SDK load failed')"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" onerror="console.warn('Firebase database SDK load failed')"></script>
 
 <script>
 // ══════════════════════════════
@@ -766,31 +791,48 @@ function connectFirebase(){
   setSyncStatus('connecting');
   document.getElementById('fb_status_area').textContent='接続中…';
   try{
-    // 既存アプリがあれば削除
-    if(fbApp){try{fbApp.delete();}catch(e){}}
-    fbApp=firebase.initializeApp(cfg,'factory-schedule');
-    fbDb=firebase.database(fbApp);
-    // 接続テスト
-    fbDb.ref('.info/connected').on('value',snap=>{
-      if(snap.val()===true){
-        fbConnected=true;
-        setSyncStatus('connected');
-        document.getElementById('fb_status_area').textContent='✅ 接続成功！データを同期します。';
-        document.getElementById('fb_disconnectBtn').style.display='inline-block';
-        localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(cfg));
-        // データをFirebaseからロード、なければローカルをアップロード
-        startFirebaseSync();
-        showToast('🔥 Firebaseに接続しました');
-        setTimeout(()=>closeFBConfig(),1200);
-      } else {
-        setSyncStatus('offline');
-      }
-    });
+    // 既存アプリがあれば再利用、なければ新規作成
+    try{
+      fbApp=firebase.app('factory-schedule');
+      fbApp.delete().then(()=>{
+        fbApp=firebase.initializeApp(cfg,'factory-schedule');
+        fbDb=firebase.database(fbApp);
+        startFBConnection();
+      });
+    }catch(e){
+      fbApp=firebase.initializeApp(cfg,'factory-schedule');
+      fbDb=firebase.database(fbApp);
+      startFBConnection();
+    }
   }catch(e){
     setSyncStatus('error');
     document.getElementById('fb_status_area').textContent='❌ 接続エラー：'+e.message;
     showToast('❌ 接続エラー：'+e.message);
   }
+}
+function startFBConnection(){
+  fbDb.ref('.info/connected').on('value',snap=>{
+    if(snap.val()===true){
+      fbConnected=true;
+      setSyncStatus('connected');
+      document.getElementById('fb_status_area').textContent='✅ 接続成功！データを同期します。';
+      document.getElementById('fb_disconnectBtn').style.display='inline-block';
+      localStorage.setItem(FB_CONFIG_KEY,JSON.stringify({
+        apiKey:document.getElementById('fb_apiKey').value.trim(),
+        authDomain:document.getElementById('fb_authDomain').value.trim(),
+        databaseURL:document.getElementById('fb_databaseURL').value.trim(),
+        projectId:document.getElementById('fb_projectId').value.trim(),
+        storageBucket:document.getElementById('fb_storageBucket').value.trim(),
+        messagingSenderId:document.getElementById('fb_messagingSenderId').value.trim(),
+        appId:document.getElementById('fb_appId').value.trim(),
+      }));
+      startFirebaseSync();
+      showToast('🔥 Firebaseに接続しました');
+      setTimeout(()=>closeFBConfig(),1200);
+    } else {
+      setSyncStatus('offline');
+    }
+  });
 }
 
 function disconnectFirebase(){
@@ -854,6 +896,12 @@ function fbSaveAll(){
 
 // 起動時にlocalStorageから設定を読み込んで自動接続
 function autoConnectFirebase(){
+  // Firebase SDKが読み込まれているか確認、なければリトライ
+  if(typeof firebase==='undefined'){
+    console.warn('Firebase SDK not yet loaded, retrying in 500ms...');
+    setTimeout(autoConnectFirebase, 500);
+    return;
+  }
   // ファイルに直接埋め込まれた設定を使用
   const embeddedConfig={
     apiKey:"AIzaSyDrZNjszozY7J_RvcPI3JaB9J1VLuGRuGk",
@@ -874,8 +922,12 @@ function autoConnectFirebase(){
   }catch(e){}
   // 自動接続実行
   try{
-    if(fbApp){try{fbApp.delete();}catch(e){}}
-    fbApp=firebase.initializeApp(embeddedConfig,'factory-schedule');
+    // 既存アプリがあれば再利用、なければ新規作成
+    try{
+      fbApp=firebase.app('factory-schedule');
+    }catch(e){
+      fbApp=firebase.initializeApp(embeddedConfig,'factory-schedule');
+    }
     fbDb=firebase.database(fbApp);
     setSyncStatus('connecting');
     fbDb.ref('.info/connected').on('value',snap=>{
@@ -892,6 +944,7 @@ function autoConnectFirebase(){
   }catch(e){
     setSyncStatus('error');
     console.error('Firebase auto-connect error:',e);
+    showToast('❌ Firebase接続エラー: '+e.message);
   }
 }
 
