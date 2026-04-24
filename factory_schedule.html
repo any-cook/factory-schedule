@@ -206,6 +206,11 @@ select option{background:#1c2128;}
 <header>
   <div class="logo">🏭 <span>//</span> 工場スケジュール</div>
   <div class="header-right">
+    <div id="syncStatus" style="font-size:11px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);">
+      <span id="syncDot" style="width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex-shrink:0;"></span>
+      <span id="syncText">未接続</span>
+    </div>
+    <button class="btn btn-ghost" style="font-size:11px;" onclick="openFBConfig()">⚙ Firebase設定</button>
     <button class="btn btn-ghost" id="notifBtn" onclick="toggleNP()" style="position:relative;font-size:12px;">
       🔔 通知 <span class="notif-badge" id="notifBadge">0</span>
     </button>
@@ -213,6 +218,50 @@ select option{background:#1c2128;}
     <button class="btn btn-primary" onclick="openFactoryModal()">🏭 工場予定 追加</button>
   </div>
 </header>
+
+<!-- ═══ Firebase設定モーダル ═══ -->
+<div class="modal-overlay" id="fbConfigModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="mhdr">
+      <div class="mhdr-title">🔥 Firebase 接続設定</div>
+      <button class="mclose" onclick="closeFBConfig()">×</button>
+    </div>
+    <div class="mbody">
+      <div class="msec">
+        <div class="msec-title">接続状態</div>
+        <div id="fb_status_area" style="font-size:13px;color:var(--text-muted);padding:6px 0;">未接続です。以下にFirebaseの設定を入力してください。</div>
+      </div>
+      <div class="msec">
+        <div class="msec-title">Firebase設定情報</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+          Firebaseコンソール（<a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent2);">console.firebase.google.com</a>）でプロジェクトを作成し、<br>
+          「プロジェクトの設定 → マイアプリ → Firebase SDK設定」からコピーしてください。
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div class="field"><label>API Key</label><input id="fb_apiKey" placeholder="AIzaSy..."></div>
+          <div class="field"><label>Auth Domain</label><input id="fb_authDomain" placeholder="your-project.firebaseapp.com"></div>
+          <div class="field"><label>Database URL</label><input id="fb_databaseURL" placeholder="https://your-project-default-rtdb.firebaseio.com"></div>
+          <div class="field"><label>Project ID</label><input id="fb_projectId" placeholder="your-project-id"></div>
+          <div class="field"><label>Storage Bucket</label><input id="fb_storageBucket" placeholder="your-project.appspot.com"></div>
+          <div class="field"><label>Messaging Sender ID</label><input id="fb_messagingSenderId" placeholder="123456789"></div>
+          <div class="field"><label>App ID</label><input id="fb_appId" placeholder="1:123456789:web:abc..."></div>
+        </div>
+      </div>
+      <div class="msec" style="background:rgba(240,136,62,.06);border-color:rgba(240,136,62,.2);">
+        <div class="msec-title" style="color:var(--accent);">⚠️ Firebaseのルール設定</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.7;">
+          Firebaseコンソール → Realtime Database → ルール で以下を設定してください：<br>
+          <code style="background:var(--bg);padding:2px 6px;border-radius:3px;font-size:10px;display:block;margin-top:6px;">{"rules":{".read":true,".write":true}}</code>
+        </div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-danger btn-sm" id="fb_disconnectBtn" style="display:none;margin-right:auto;" onclick="disconnectFirebase()">切断</button>
+      <button class="btn btn-ghost" onclick="closeFBConfig()">キャンセル</button>
+      <button class="btn btn-primary" onclick="connectFirebase()">🔥 接続する</button>
+    </div>
+  </div>
+</div>
 
 <div class="app">
   <!-- Sidebar -->
@@ -532,6 +581,10 @@ select option{background:#1c2128;}
   </div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
 // ══════════════════════════════
 // DATA
@@ -596,15 +649,194 @@ function getColor(s){
   return s.color||'#58a6ff';
 }
 
+// ══════════════════════════════
+// FIREBASE
+// ══════════════════════════════
+let fbApp=null, fbDb=null, fbConnected=false;
+const FB_CONFIG_KEY='fb_config_v1';
+
+function setSyncStatus(status){
+  // status: 'connected'|'connecting'|'offline'|'error'
+  const dot=document.getElementById('syncDot');
+  const txt=document.getElementById('syncText');
+  if(!dot||!txt)return;
+  const map={
+    connected:{color:'#3fb950',text:'同期中'},
+    connecting:{color:'#d29922',text:'接続中…'},
+    offline:{color:'#7d8590',text:'未接続'},
+    error:{color:'#f85149',text:'接続エラー'},
+  };
+  const m=map[status]||map.offline;
+  dot.style.background=m.color;
+  txt.textContent=m.text;
+}
+
+function openFBConfig(){
+  // 保存済み設定を復元
+  try{
+    const saved=JSON.parse(localStorage.getItem(FB_CONFIG_KEY)||'{}');
+    ['apiKey','authDomain','databaseURL','projectId','storageBucket','messagingSenderId','appId'].forEach(k=>{
+      const el=document.getElementById('fb_'+k);
+      if(el&&saved[k])el.value=saved[k];
+    });
+  }catch(e){}
+  document.getElementById('fb_disconnectBtn').style.display=fbConnected?'inline-block':'none';
+  document.getElementById('fb_status_area').textContent=fbConnected?'✅ Firebaseに接続済みです。':'未接続です。以下にFirebaseの設定を入力してください。';
+  document.getElementById('fbConfigModal').classList.add('open');
+}
+function closeFBConfig(){document.getElementById('fbConfigModal').classList.remove('open');}
+
+function connectFirebase(){
+  const cfg={
+    apiKey:document.getElementById('fb_apiKey').value.trim(),
+    authDomain:document.getElementById('fb_authDomain').value.trim(),
+    databaseURL:document.getElementById('fb_databaseURL').value.trim(),
+    projectId:document.getElementById('fb_projectId').value.trim(),
+    storageBucket:document.getElementById('fb_storageBucket').value.trim(),
+    messagingSenderId:document.getElementById('fb_messagingSenderId').value.trim(),
+    appId:document.getElementById('fb_appId').value.trim(),
+  };
+  if(!cfg.apiKey||!cfg.databaseURL){showToast('⚠ API KeyとDatabase URLは必須です');return;}
+  setSyncStatus('connecting');
+  document.getElementById('fb_status_area').textContent='接続中…';
+  try{
+    // 既存アプリがあれば削除
+    if(fbApp){try{fbApp.delete();}catch(e){}}
+    fbApp=firebase.initializeApp(cfg,'factory-schedule');
+    fbDb=firebase.database(fbApp);
+    // 接続テスト
+    fbDb.ref('.info/connected').on('value',snap=>{
+      if(snap.val()===true){
+        fbConnected=true;
+        setSyncStatus('connected');
+        document.getElementById('fb_status_area').textContent='✅ 接続成功！データを同期します。';
+        document.getElementById('fb_disconnectBtn').style.display='inline-block';
+        localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(cfg));
+        // データをFirebaseからロード、なければローカルをアップロード
+        startFirebaseSync();
+        showToast('🔥 Firebaseに接続しました');
+        setTimeout(()=>closeFBConfig(),1200);
+      } else {
+        setSyncStatus('offline');
+      }
+    });
+  }catch(e){
+    setSyncStatus('error');
+    document.getElementById('fb_status_area').textContent='❌ 接続エラー：'+e.message;
+    showToast('❌ 接続エラー：'+e.message);
+  }
+}
+
+function disconnectFirebase(){
+  if(fbApp){try{fbApp.delete();}catch(e){}}
+  fbApp=null;fbDb=null;fbConnected=false;
+  localStorage.removeItem(FB_CONFIG_KEY);
+  setSyncStatus('offline');
+  closeFBConfig();
+  showToast('Firebaseを切断しました');
+}
+
+function startFirebaseSync(){
+  if(!fbDb)return;
+  // リアルタイムリスナー設定
+  fbDb.ref('factories').on('value',snap=>{
+    const val=snap.val();
+    if(val){factories=Object.values(val);}
+    renderSidebar();renderCalendar();
+  });
+  fbDb.ref('persons').on('value',snap=>{
+    const val=snap.val();
+    if(val){persons=Object.values(val);}
+    renderSidebar();renderCalendar();
+  });
+  fbDb.ref('schedules').on('value',snap=>{
+    const val=snap.val();
+    if(val){schedules=Object.values(val);}
+    else schedules=[];
+    renderSidebar();renderCalendar();
+  });
+  fbDb.ref('repeatSeries').on('value',snap=>{
+    const val=snap.val();
+    if(val){repeatSeries=Object.values(val);}
+    else repeatSeries=[];
+  });
+  // 初回：ローカルデータが存在してFirebase側が空ならアップロード
+  fbDb.ref('factories').once('value',snap=>{
+    if(!snap.val()){
+      // Firebaseが空 → ローカルの初期データをアップロード
+      fbSaveAll();
+    }
+  });
+}
+
+// Firebaseへの書き込みヘルパー
+function fbSave(path,id,data){
+  if(!fbDb)return;
+  fbDb.ref(path+'/'+id).set(data);
+}
+function fbDelete(path,id){
+  if(!fbDb)return;
+  fbDb.ref(path+'/'+id).remove();
+}
+function fbSaveAll(){
+  if(!fbDb)return;
+  factories.forEach(f=>fbDb.ref('factories/'+f.id).set(f));
+  persons.forEach(p=>fbDb.ref('persons/'+p.id).set(p));
+  schedules.forEach(s=>fbDb.ref('schedules/'+s.id).set(s));
+  repeatSeries.forEach(r=>fbDb.ref('repeatSeries/'+r.id).set(r));
+}
+
+// 起動時にlocalStorageから設定を読み込んで自動接続
+function autoConnectFirebase(){
+  // ファイルに直接埋め込まれた設定を使用
+  const embeddedConfig={
+    apiKey:"AIzaSyDrZNjszozY7J_RvcPI3JaB9J1VLuGRuGk",
+    authDomain:"factory-schedule-1e5d5.firebaseapp.com",
+    databaseURL:"https://factory-schedule-1e5d5-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"factory-schedule-1e5d5",
+    storageBucket:"factory-schedule-1e5d5.firebasestorage.app",
+    messagingSenderId:"926690797990",
+    appId:"1:926690797990:web:a2e5413ed5c3d01a42c767",
+  };
+  // 設定UIにも表示しておく
+  try{
+    Object.keys(embeddedConfig).forEach(k=>{
+      const el=document.getElementById('fb_'+k);
+      if(el)el.value=embeddedConfig[k];
+    });
+    localStorage.setItem(FB_CONFIG_KEY,JSON.stringify(embeddedConfig));
+  }catch(e){}
+  // 自動接続実行
+  try{
+    if(fbApp){try{fbApp.delete();}catch(e){}}
+    fbApp=firebase.initializeApp(embeddedConfig,'factory-schedule');
+    fbDb=firebase.database(fbApp);
+    setSyncStatus('connecting');
+    fbDb.ref('.info/connected').on('value',snap=>{
+      if(snap.val()===true){
+        fbConnected=true;
+        setSyncStatus('connected');
+        document.getElementById('fb_disconnectBtn').style.display='inline-block';
+        startFirebaseSync();
+      } else {
+        if(fbConnected)setSyncStatus('connecting');
+        else setSyncStatus('offline');
+      }
+    });
+  }catch(e){
+    setSyncStatus('error');
+    console.error('Firebase auto-connect error:',e);
+  }
+}
+
+
+
 function init(){
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
   renderSidebar();renderCalendar();scheduleNotifs();
-  setTimeout(()=>addNotif('🔔','田中 太郎 — 月次ミーティング','10:00 開始 (デモ通知)'),1500);
+  autoConnectFirebase();
 }
 
-// ══════════════════════════════
-// CONFIRM
-// ══════════════════════════════
 function showConfirm(icon,title,desc,fn){
   pendingConfirmFn=fn;
   document.getElementById('cIcon').textContent=icon;
@@ -621,7 +853,9 @@ function doConfirm(){if(pendingConfirmFn)pendingConfirmFn();closeConfirm();}
 function addFactory(){
   const n=document.getElementById('newFName').value.trim();if(!n)return;
   const color=PRESET_COLORS[factories.length%PRESET_COLORS.length];
-  factories.push({id:'f'+Date.now(),name:n,color});
+  const f={id:'f'+Date.now(),name:n,color};
+  factories.push(f);
+  fbSave('factories',f.id,f);
   document.getElementById('newFName').value='';
   renderSidebar();renderCalendar();showToast('🏭 '+n+' を追加しました');
 }
@@ -630,13 +864,18 @@ function confirmDelFactory(id,e){
   const f=factories.find(x=>x.id===id);if(!f)return;
   const pc=persons.filter(p=>p.factoryId===id).length;
   const sc=schedules.filter(s=>s.factoryId===id).length;
-  showConfirm('🏭','「'+f.name+'」を削除しますか？',`担当者 ${pc}名・予定 ${sc}件も削除されます。`,()=>{
-    factories=factories.filter(x=>x.id!==id);
-    persons=persons.filter(p=>p.factoryId!==id);
-    schedules=schedules.filter(s=>s.factoryId!==id||s.type==='personal');
-    if(selectedFactoryId===id){selectedFactoryId=null;selectedPersonIds=[];}
-    renderSidebar();renderCalendar();showToast('🗑 '+f.name+' を削除しました');
-  });
+  showConfirm('🏭','「'+f.name+'」を削除しますか？',`担当者 ${pc}名・予定 ${sc}件も削除されます。`,()=>doDeleteFactory(id));
+}
+function doDeleteFactory(id){
+  const f=factories.find(x=>x.id===id);
+  factories=factories.filter(x=>x.id!==id);
+  persons.filter(p=>p.factoryId===id).forEach(p=>{fbDelete('persons',p.id);});
+  persons=persons.filter(p=>p.factoryId!==id);
+  schedules.filter(s=>s.factoryId===id).forEach(s=>{fbDelete('schedules',s.id);});
+  schedules=schedules.filter(s=>s.factoryId!==id);
+  fbDelete('factories',id);
+  if(selectedFactoryId===id){selectedFactoryId=null;selectedPersonIds=[];}
+  renderSidebar();renderCalendar();showToast('🗑 '+f?.name+' を削除しました');
 }
 function selectFactory(id){selectedFactoryId=id;selectedPersonIds=[];renderSidebar();renderCalendar();}
 
@@ -648,7 +887,9 @@ function addPerson(){
   const role=document.getElementById('newPRole').value.trim()||'スタッフ';
   const fId=document.getElementById('newPFactory').value||factories[0]?.id;
   if(!fId){showToast('⚠ 先に工場を追加してください');return;}
-  persons.push({id:'p'+Date.now(),name,factoryId:fId,role});
+  const p={id:'p'+Date.now(),name,factoryId:fId,role};
+  persons.push(p);
+  fbSave('persons',p.id,p);
   document.getElementById('newPName').value='';
   document.getElementById('newPRole').value='';
   renderSidebar();renderCalendar();
@@ -658,12 +899,16 @@ function confirmDelPerson(id,e){
   e.stopPropagation();
   const p=persons.find(x=>x.id===id);if(!p)return;
   const sc=schedules.filter(s=>s.personId===id).length;
-  showConfirm('👤','「'+p.name+'」を削除しますか？',`この担当者の予定 ${sc}件も削除されます。`,()=>{
-    persons=persons.filter(x=>x.id!==id);
-    schedules=schedules.filter(s=>s.personId!==id);
-    selectedPersonIds=selectedPersonIds.filter(x=>x!==id);
-    renderSidebar();renderCalendar();showToast('🗑 '+p.name+' を削除しました');
-  });
+  showConfirm('👤','「'+p.name+'」を削除しますか？',`この担当者の予定 ${sc}件も削除されます。`,()=>doDeletePerson(id));
+}
+function doDeletePerson(id){
+  const p=persons.find(x=>x.id===id);
+  persons=persons.filter(x=>x.id!==id);
+  schedules.filter(s=>s.personId===id).forEach(s=>fbDelete('schedules',s.id));
+  schedules=schedules.filter(s=>s.personId!==id);
+  fbDelete('persons',id);
+  selectedPersonIds=selectedPersonIds.filter(x=>x!==id);
+  renderSidebar();renderCalendar();showToast('🗑 '+p?.name+' を削除しました');
 }
 function togglePerson(id){const i=selectedPersonIds.indexOf(id);if(i===-1)selectedPersonIds.push(id);else selectedPersonIds.splice(i,1);renderSidebar();renderCalendar();}
 
@@ -1165,8 +1410,19 @@ function saveFM(){
     notifMin:parseInt(document.getElementById('fm_notifMin').value)||15,
     note:'',
   };
-  if(editingFMId){Object.assign(schedules.find(x=>x.id===editingFMId),obj);showToast('✅ 工場予定を更新しました');}
-  else{schedules.push({id:'s'+Date.now(),...obj});showToast('✅ 工場予定を追加しました'+(isR?' (繰り返し)':''));}
+  if(editingFMId){
+    Object.assign(schedules.find(x=>x.id===editingFMId),obj);
+    fbSave('schedules',editingFMId,schedules.find(x=>x.id===editingFMId));
+    if(repeatId)fbSave('repeatSeries',repeatId,repeatSeries.find(r=>r.id===repeatId));
+    showToast('✅ 工場予定を更新しました');
+  } else {
+    const newId='s'+Date.now();
+    const newS={id:newId,...obj};
+    schedules.push(newS);
+    fbSave('schedules',newId,newS);
+    if(repeatId)fbSave('repeatSeries',repeatId,repeatSeries.find(r=>r.id===repeatId));
+    showToast('✅ 工場予定を追加しました'+(isR?' (繰り返し)':''));
+  }
   closeFM();scheduleNotifs();renderSidebar();renderCalendar();
 }
 function deleteFM(){
@@ -1174,11 +1430,14 @@ function deleteFM(){
   const s=schedules.find(x=>x.id===editingFMId);
   if(s?.repeatId){
     showConfirm('🔁','繰り返し予定を削除','全ての繰り返し分が削除されます。',()=>{
+      fbDelete('repeatSeries',s.repeatId);
       repeatSeries=repeatSeries.filter(r=>r.id!==s.repeatId);
+      fbDelete('schedules',editingFMId);
       schedules=schedules.filter(x=>x.id!==editingFMId);
       closeFM();scheduleNotifs();renderSidebar();renderCalendar();showToast('🗑 繰り返し予定を削除しました');
     });
   } else {
+    fbDelete('schedules',editingFMId);
     schedules=schedules.filter(x=>x.id!==editingFMId);
     closeFM();renderSidebar();renderCalendar();showToast('🗑 工場予定を削除しました');
   }
@@ -1360,8 +1619,19 @@ function savePM(){
     notifMin:parseInt(document.getElementById('pm_notifMin').value)||15,
     note:document.getElementById('pm_note').value,
   };
-  if(editingPMId){Object.assign(schedules.find(x=>x.id===editingPMId),obj);showToast('✅ 個人予定を更新しました');}
-  else{schedules.push({id:'s'+Date.now(),...obj});showToast('✅ 個人予定を追加しました'+(isR?' (繰り返し)':''));}
+  if(editingPMId){
+    Object.assign(schedules.find(x=>x.id===editingPMId),obj);
+    fbSave('schedules',editingPMId,schedules.find(x=>x.id===editingPMId));
+    if(repeatId)fbSave('repeatSeries',repeatId,repeatSeries.find(r=>r.id===repeatId));
+    showToast('✅ 個人予定を更新しました');
+  } else {
+    const newId='s'+Date.now();
+    const newS={id:newId,...obj};
+    schedules.push(newS);
+    fbSave('schedules',newId,newS);
+    if(repeatId)fbSave('repeatSeries',repeatId,repeatSeries.find(r=>r.id===repeatId));
+    showToast('✅ 個人予定を追加しました'+(isR?' (繰り返し)':''));
+  }
   closePM();scheduleNotifs();renderSidebar();renderCalendar();
 }
 function deletePM(){
@@ -1369,11 +1639,14 @@ function deletePM(){
   const s=schedules.find(x=>x.id===editingPMId);
   if(s?.repeatId){
     showConfirm('🔁','繰り返し予定を削除','全ての繰り返し分が削除されます。',()=>{
+      fbDelete('repeatSeries',s.repeatId);
       repeatSeries=repeatSeries.filter(r=>r.id!==s.repeatId);
+      fbDelete('schedules',editingPMId);
       schedules=schedules.filter(x=>x.id!==editingPMId);
       closePM();renderSidebar();renderCalendar();showToast('🗑 繰り返し予定を削除しました');
     });
   } else {
+    fbDelete('schedules',editingPMId);
     schedules=schedules.filter(x=>x.id!==editingPMId);
     closePM();renderSidebar();renderCalendar();showToast('🗑 個人予定を削除しました');
   }
