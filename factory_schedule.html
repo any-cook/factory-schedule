@@ -199,6 +199,71 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:1
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 select option{background:#1c2128;}
+/* 土曜・日曜カラー */
+.day-header.sat .dn{color:#58a6ff;}.day-header.sat .dd{color:#58a6ff;}
+.day-header.sun .dn{color:#f85149;}.day-header.sun .dd{color:#f85149;}
+.day-header.sat{background:rgba(88,166,255,.05);}
+.day-header.sun{background:rgba(248,81,73,.05);}
+.day-cell.sat{background:rgba(88,166,255,.025);}
+.day-cell.sun{background:rgba(248,81,73,.025);}
+.mcell.sat .mday-num{color:#58a6ff !important;}
+.mcell.sun .mday-num{color:#f85149 !important;}
+.mcell.sat{background:rgba(88,166,255,.03);}
+.mcell.sun{background:rgba(248,81,73,.03);}
+.mday-hdr.sat{color:#58a6ff;}
+.mday-hdr.sun{color:#f85149;}
+
+/* ─── 印刷スタイル ─── */
+@media print {
+  :root{
+    --bg:#ffffff;--surface:#ffffff;--surface2:#f5f5f5;--border:#cccccc;
+    --text:#111111;--text-muted:#555555;--text-dim:#888888;
+  }
+  body{background:#fff;color:#111;}
+  header{display:none !important;}
+  .sidebar{display:none !important;}
+  .notif-panel,.toast-wrap,.modal-overlay{display:none !important;}
+  .toolbar{background:#fff;border-bottom:1px solid #ccc;padding:8px 14px;}
+  .toolbar .view-tabs,.toolbar-right,.nav-btn{display:none !important;}
+  .date-label{font-size:15px;font-weight:700;color:#111;}
+  .app{height:auto;overflow:visible;}
+  .main{overflow:visible;}
+  .calendar-area{overflow:visible;padding:10px;}
+  /* 週グリッド */
+  .week-grid{border-color:#ccc;}
+  .day-header{background:#f0f0f0;border-color:#ccc;}
+  .day-header .dn{color:#555;}
+  .day-header .dd{color:#111;}
+  .day-header.today .dd{color:var(--accent);}
+  .day-header.sat .dd{color:#1a6fd8;}
+  .day-header.sun .dd{color:#cc2222;}
+  .day-cell{border-color:#ddd;min-height:40px;}
+  .day-cell.sat{background:#f0f4ff;}
+  .day-cell.sun{background:#fff4f4;}
+  .time-label{background:#f7f7f7;color:#888;border-color:#ddd;}
+  .th-corner{background:#f0f0f0;}
+  /* 月グリッド */
+  .month-grid{background:#ccc;}
+  .mday-hdr{background:#f0f0f0;color:#555;}
+  .mday-hdr.sat{color:#1a6fd8;}
+  .mday-hdr.sun{color:#cc2222;}
+  .mcell{background:#fff;min-height:80px;}
+  .mcell.sat{background:#f0f4ff;}
+  .mcell.sun{background:#fff4f4;}
+  .mcell.today{background:#fff8f0;}
+  .mcell .mday-num{color:#555;}
+  .mcell.sat .mday-num{color:#1a6fd8 !important;}
+  .mcell.sun .mday-num{color:#cc2222 !important;}
+  .mcell.today .mday-num{color:var(--accent);}
+  /* 予定ブロック */
+  .sch-block{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .mevent{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  /* 人別ビュー */
+  .plabel{background:#f7f7f7;}
+  .pcell{border-color:#ddd;}
+  /* 余白 */
+  @page{margin:15mm 12mm;}
+}
 </style>
 </head>
 <body>
@@ -211,6 +276,7 @@ select option{background:#1c2128;}
       <span id="syncText">未接続</span>
     </div>
     <button class="btn btn-ghost" style="font-size:11px;" onclick="openFBConfig()">⚙ Firebase設定</button>
+    <button class="btn btn-ghost" style="font-size:11px;" onclick="printSchedule()">🖨 印刷</button>
     <button class="btn btn-ghost" id="notifBtn" onclick="toggleNP()" style="position:relative;font-size:12px;">
       🔔 通知 <span class="notif-badge" id="notifBadge">0</span>
     </button>
@@ -353,10 +419,10 @@ select option{background:#1c2128;}
         </div>
       </div>
       <div class="msec">
-        <div class="msec-title">🏗 製造日・🚚 発送日</div>
+        <div class="msec-title">🍲 製造日・🚚 発送日</div>
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">発送日はカレンダー上で別色で表示されます</div>
         <div class="field-row">
-          <div class="field"><label>🏗 製造日</label><input id="fm_mfg_date" type="date"></div>
+          <div class="field"><label>🍲 製造日</label><input id="fm_mfg_date" type="date"></div>
           <div class="field">
             <label>🚚 発送日</label>
             <input id="fm_ship_date" type="date">
@@ -831,6 +897,16 @@ function autoConnectFirebase(){
 
 
 
+// ══════════════════════════════
+// PRINT
+// ══════════════════════════════
+function printSchedule(){
+  // モーダル・パネルを全部閉じてから印刷
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));
+  document.getElementById('np').classList.remove('open');
+  setTimeout(()=>window.print(),200);
+}
+
 function init(){
   if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
   renderSidebar();renderCalendar();scheduleNotifs();
@@ -1003,7 +1079,7 @@ function getVisible(start,end){
           if(md>=rs&&md<=re){
             result.push({...s,id:s.id+'_mfg',_baseId:s.id,_kind:'mfg',
               start:s.mfgDate+'T00:00:00',end:s.mfgDate+'T00:00:00',
-              title:'🏗 '+s.title,color:getColor(s)});
+              title:'🍲 '+s.title,color:getColor(s)});
           }
         }
         // 発送日の仮想エントリ
@@ -1100,15 +1176,19 @@ function renderWeek(area){
   html+=`<div class="th-corner" style="${hasAllday?'grid-row:span 2;':''}"></div>`;
   days.forEach((d,i)=>{
     const isT=dOnly(d).getTime()===todayD.getTime();
-    html+=`<div class="day-header ${isT?'today':''}"><div class="dn">${DN[i]}</div><div class="dd">${d.getDate()}</div></div>`;
+    const dow=d.getDay();// 0=日,6=土
+    const wkCls=dow===6?'sat':dow===0?'sun':'';
+    html+=`<div class="day-header ${isT?'today':''} ${wkCls}"><div class="dn">${DN[i]}</div><div class="dd">${d.getDate()}</div></div>`;
   });
 
   // allday row
   if(hasAllday){
     html+=`<div style="background:var(--surface);border-top:1px solid var(--border);border-right:1px solid var(--border);padding:3px 4px;font-size:9px;color:var(--text-muted);display:flex;align-items:center;">終日</div>`;
     days.forEach(d=>{
+      const dow=d.getDay();
+      const wkCls=dow===6?'sat':dow===0?'sun':'';
       const dayItems=alldayItems.filter(s=>dOnly(new Date(s.start)).getTime()===dOnly(d).getTime());
-      html+=`<div style="border-left:1px solid var(--border);border-top:1px solid var(--border);padding:2px;min-height:24px;background:var(--surface2);">`;
+      html+=`<div class="${wkCls}" style="border-left:1px solid var(--border);border-top:1px solid var(--border);padding:2px;min-height:24px;background:var(--surface2);">`;
       dayItems.forEach(s=>{
         const c=getColor(s);
         const bid=s._baseId||s.id;
@@ -1120,7 +1200,11 @@ function renderWeek(area){
 
   hours.forEach(h=>{
     html+=`<div class="time-label">${pad(h)}:00</div>`;
-    days.forEach(d=>{html+=`<div class="day-cell" onclick="openFMAt('${dtStr(d,h,0)}')"></div>`;});
+    days.forEach(d=>{
+      const dow=d.getDay();
+      const wkCls=dow===6?'sat':dow===0?'sun':'';
+      html+=`<div class="day-cell ${wkCls}" onclick="openFMAt('${dtStr(d,h,0)}')"></div>`;
+    });
   });
   html+=`</div>`;area.innerHTML=html;
 
@@ -1167,12 +1251,18 @@ function renderMonth(area){
   while(cells.length%7!==0)cells.push({date:addDays(last,cells.length-startDow-last.getDate()+1),other:true});
   const vis=getVisible(new Date(y,m,1),new Date(y,m+1,0));
   let html=`<div class="month-grid">`;
-  DN.forEach(d=>html+=`<div class="mday-hdr">${d}</div>`);
+  // 曜日ヘッダー（月〜日、インデックス5=土、6=日）
+  DN.forEach((d,i)=>{
+    const wkCls=i===5?'sat':i===6?'sun':'';
+    html+=`<div class="mday-hdr ${wkCls}">${d}</div>`;
+  });
   cells.forEach(cell=>{
     const isT=dOnly(cell.date).getTime()===todayD.getTime();
+    const dow=cell.date.getDay();// 0=日,6=土
+    const wkCls=dow===6?'sat':dow===0?'sun':'';
     const ds=vis.filter(s=>dOnly(new Date(s.start)).getTime()===dOnly(cell.date).getTime());
     const ds2=dtStr(cell.date,9,0);
-    html+=`<div class="mcell ${cell.other?'other':''} ${isT?'today':''}" onclick="openFMAt('${ds2}')">
+    html+=`<div class="mcell ${cell.other?'other':''} ${isT?'today':''} ${wkCls}" onclick="openFMAt('${ds2}')">
       <div class="mday-num">${cell.date.getDate()}</div>
       ${ds.slice(0,4).map(s=>{
         const c=getColor(s);
@@ -1213,7 +1303,16 @@ function renderPerson(area){
   let html=`<div>
     <div style="display:grid;grid-template-columns:${cols};position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);">
       <div style="padding:7px 11px;border-right:1px solid var(--border);font-size:10px;color:var(--text-muted);">担当者</div>
-      ${days.map((d,i)=>{const isT=dOnly(d).getTime()===todayD.getTime();return`<div style="text-align:center;padding:7px 3px;border-right:1px solid var(--border);"><div style="font-size:9px;color:var(--text-muted);">${DN[i]}</div><div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;${isT?'color:var(--accent)':''}">${d.getDate()}</div></div>`;}).join('')}
+      ${days.map((d,i)=>{
+        const isT=dOnly(d).getTime()===todayD.getTime();
+        const dow=d.getDay();
+        const wkColor=dow===6?'#58a6ff':dow===0?'#f85149':'';
+        const bgColor=dow===6?'rgba(88,166,255,.04)':dow===0?'rgba(248,81,73,.04)':'';
+        return`<div style="text-align:center;padding:7px 3px;border-right:1px solid var(--border);${bgColor?'background:'+bgColor+';':''}">
+          <div style="font-size:9px;color:${wkColor||'var(--text-muted)'};">${DN[i]}</div>
+          <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${isT?'var(--accent)':wkColor||'var(--text)'};">${d.getDate()}</div>
+        </div>`;
+      }).join('')}
     </div>`;
   fp.forEach(p=>{
     const fc=factories.find(f=>f.id===p.factoryId);
