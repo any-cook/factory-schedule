@@ -1390,9 +1390,27 @@ function renderWeek(area){
   requestAnimationFrame(()=>{
     const grid=document.getElementById('wg');
     if(!grid)return;
+    const gridRect=grid.getBoundingClientRect();
     const gridW=grid.offsetWidth;
-    const timeColW=65; // 時刻列の幅（CSS: 65px）
-    const dayW=(gridW-timeColW)/7; // 1日分の幅
+    const timeColW=65;
+    const dayW=(gridW-timeColW)/7;
+
+    // ヘッダー行（day-header）の実際の高さを計測
+    const headerEl=grid.querySelector('.day-header');
+    const headerH=headerEl?headerEl.offsetHeight:38;
+
+    // 終日行の高さを計測
+    let alldayH=0;
+    if(hasAllday){
+      const alldayEl=grid.children[9]; // corner + 7headers + 終日ラベル = index 9
+      // 終日バーの最初のセルを取得
+      const alldayCells=grid.querySelectorAll('[style*="min-height:24px"]');
+      if(alldayCells.length>0)alldayH=alldayCells[0].offsetHeight||26;
+    }
+
+    // 1時間分のセル高さを実測
+    const cellEl=grid.querySelector('.day-cell');
+    const cellH=cellEl?cellEl.offsetHeight:46;
 
     vis.filter(s=>!s._kind).forEach(s=>{
       const sd=new Date(s.start),ed=new Date(s.end);
@@ -1400,9 +1418,10 @@ function renderWeek(area){
       if(di===-1)return;
       const sh=sd.getHours()+sd.getMinutes()/60;
       const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
-      const alldayOffset=hasAllday?24:0;
-      const top=(sh-7)*46+34+alldayOffset;
-      const ht=Math.max((eh-sh)*46,16);
+      // 7時を起点（hours配列の最初）
+      const startHour=7;
+      const top=headerH+alldayH+(sh-startHour)*cellH;
+      const ht=Math.max((eh-sh)*cellH,16);
       const left=timeColW+(di*dayW)+2;
       const width=dayW-5;
       const c=getColor(s);
