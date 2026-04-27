@@ -406,6 +406,12 @@ select option{background:#ffffff;color:#1a1d23;}
         <button class="nav-btn" onclick="navigate(1)">›</button>
         <button class="nav-btn" onclick="goToday()" style="font-size:11px;">今日</button>
       </div>
+      <!-- 表示フィルター -->
+      <div style="display:flex;background:var(--bg);border-radius:6px;padding:3px;gap:2px;border:1px solid var(--border);">
+        <button class="view-tab active" id="filterAll" onclick="setTypeFilter('all',this)" style="font-size:11px;">全て</button>
+        <button class="view-tab" id="filterFactory" onclick="setTypeFilter('factory',this)" style="font-size:11px;">🏭 工場のみ</button>
+        <button class="view-tab" id="filterPersonal" onclick="setTypeFilter('personal',this)" style="font-size:11px;">👤 個人のみ</button>
+      </div>
       <div class="toolbar-right">
         <span id="filterInfo" style="font-size:11px;color:var(--text-muted);"></span>
       </div>
@@ -764,6 +770,7 @@ let notifTimers=[];
 // UI state
 let currentView='week';
 let currentDate=new Date();
+let typeFilter='all'; // 'all' | 'factory' | 'personal'
 let selectedFactoryId=null;
 let selectedPersonIds=[];
 let editingFMId=null;
@@ -1158,7 +1165,25 @@ function renderSidebar(){
 // ══════════════════════════════
 // VIEW
 // ══════════════════════════════
-function setView(v,el){currentView=v;document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderCalendar();}
+function setView(v,el){
+  currentView=v;
+  // ビュータブのみactive切り替え（フィルタータブは除外）
+  document.querySelectorAll('.view-tabs .view-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderCalendar();
+}
+function setTypeFilter(f,el){
+  typeFilter=f;
+  // フィルタータブのactive切り替え（view-tabクラスと共存するため個別管理）
+  ['filterAll','filterFactory','filterPersonal'].forEach(id=>{
+    document.getElementById(id)?.classList.remove('active');
+  });
+  el.classList.add('active');
+  renderCalendar();
+  // フィルター状態表示
+  const labels={all:'',factory:'🏭 工場予定のみ表示中',personal:'👤 個人予定のみ表示中'};
+  document.getElementById('filterInfo').textContent=labels[f]||'';
+}
 function navigate(d){
   if(currentView==='month')currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()+d,1);
   else currentDate=addDays(currentDate,7*d);
@@ -1169,7 +1194,12 @@ function getWeekStart(d){const r=new Date(d);const dow=(r.getDay()+6)%7;r.setDat
 
 function filteredBase(){
   let s=schedules;
+  // 種別フィルター
+  if(typeFilter==='factory')s=s.filter(x=>x.type==='factory');
+  else if(typeFilter==='personal')s=s.filter(x=>x.type==='personal');
+  // 工場フィルター
   if(selectedFactoryId)s=s.filter(x=>x.factoryId===selectedFactoryId||x.type==='personal');
+  // 担当者フィルター
   if(selectedPersonIds.length>0)s=s.filter(x=>selectedPersonIds.includes(x.personId));
   return s;
 }
