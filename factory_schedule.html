@@ -904,36 +904,39 @@ function disconnectFirebase(){
   showToast('Firebaseを切断しました');
 }
 
+// 保存操作中フラグ（リスナーの誤上書きを防ぐ）
+let fbSaving=false;
+
 function startFirebaseSync(){
   if(!fbDb)return;
-  // リアルタイムリスナー設定
   fbDb.ref('factories').on('value',snap=>{
+    if(fbSaving)return;
     const val=snap.val();
     if(val){factories=Object.values(val);}
     renderSidebar();renderCalendar();
   });
   fbDb.ref('persons').on('value',snap=>{
+    if(fbSaving)return;
     const val=snap.val();
     if(val){persons=Object.values(val);}
     renderSidebar();renderCalendar();
   });
   fbDb.ref('schedules').on('value',snap=>{
+    if(fbSaving)return;
     const val=snap.val();
     if(val){schedules=Object.values(val);}
     else schedules=[];
     renderSidebar();renderCalendar();
   });
   fbDb.ref('repeatSeries').on('value',snap=>{
+    if(fbSaving)return;
     const val=snap.val();
     if(val){repeatSeries=Object.values(val);}
     else repeatSeries=[];
   });
-  // 初回：ローカルデータが存在してFirebase側が空ならアップロード
+  // 初回：Firebase側が空ならローカルをアップロード
   fbDb.ref('factories').once('value',snap=>{
-    if(!snap.val()){
-      // Firebaseが空 → ローカルの初期データをアップロード
-      fbSaveAll();
-    }
+    if(!snap.val()){fbSaveAll();}
   });
 }
 
@@ -1710,9 +1713,18 @@ function saveFM(){
     notifMin:parseInt(document.getElementById('fm_notifMin').value)||15,
     note:'',
   };
+  fbSaving=true;
   if(editingFMId){
-    Object.assign(schedules.find(x=>x.id===editingFMId),obj);
-    fbSave('schedules',editingFMId,schedules.find(x=>x.id===editingFMId));
+    const target=schedules.find(x=>x.id===editingFMId);
+    if(target){
+      Object.assign(target,obj);
+      fbSave('schedules',editingFMId,target);
+    } else {
+      // ローカルに見つからない場合（Firebase同期で上書きされた）新規として追加
+      const fixS={id:editingFMId,...obj};
+      schedules.push(fixS);
+      fbSave('schedules',editingFMId,fixS);
+    }
     if(repeatId)fbSave('repeatSeries',repeatId,repeatSeries.find(r=>r.id===repeatId));
     showToast('✅ 工場予定を更新しました');
   } else {
@@ -1724,6 +1736,7 @@ function saveFM(){
     showToast('✅ 工場予定を追加しました'+(isR?' (繰り返し)':''));
   }
   closeFM();scheduleNotifs();renderSidebar();renderCalendar();
+  setTimeout(()=>{fbSaving=false;},2000);
 }
 function deleteFM(){
   if(!editingFMId)return;
@@ -1939,9 +1952,17 @@ function savePM(){
     notifMin:parseInt(document.getElementById('pm_notifMin').value)||15,
     note:document.getElementById('pm_note').value,
   };
+  fbSaving=true;
   if(editingPMId){
-    Object.assign(schedules.find(x=>x.id===editingPMId),obj);
-    fbSave('schedules',editingPMId,schedules.find(x=>x.id===editingPMId));
+    const target=schedules.find(x=>x.id===editingPMId);
+    if(target){
+      Object.assign(target,obj);
+      fbSave('schedules',editingPMId,target);
+    } else {
+      const fixS={id:editingPMId,...obj};
+      schedules.push(fixS);
+      fbSave('schedules',editingPMId,fixS);
+    }
     if(repeatId)fbSave('repeatSeries',repeatId,repeatSeries.find(r=>r.id===repeatId));
     showToast('✅ 個人予定を更新しました');
   } else {
@@ -1953,6 +1974,7 @@ function savePM(){
     showToast('✅ 個人予定を追加しました'+(isR?' (繰り返し)':''));
   }
   closePM();scheduleNotifs();renderSidebar();renderCalendar();
+  setTimeout(()=>{fbSaving=false;},2000);
 }
 function deletePM(){
   if(!editingPMId)return;
