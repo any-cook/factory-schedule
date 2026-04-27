@@ -1386,30 +1386,38 @@ function renderWeek(area){
   });
   html+=`</div>`;area.innerHTML=html;
 
-  // Overlay time-based blocks (通常予定・個人予定のみ)
-  const grid=document.getElementById('wg');
-  vis.filter(s=>!s._kind).forEach(s=>{
-    const sd=new Date(s.start),ed=new Date(s.end);
-    const di=days.findIndex(d=>dOnly(d).getTime()===dOnly(sd).getTime());
-    if(di===-1)return;
-    const sh=sd.getHours()+sd.getMinutes()/60;
-    const eh=Math.max(ed.getHours()+ed.getMinutes()/60, sh+0.5);
-    const alldayOffset=hasAllday?24:0;
-    const top=(sh-7)*46+34+alldayOffset;
-    const ht=Math.max((eh-sh)*46,16);
-    const c=getColor(s);
-    const isPersonal=s.type==='personal';
-    const b=document.createElement('div');
-    b.className='sch-block'+(isPersonal?' personal-stripe':'');
-    b.style.cssText=`top:${top}px;height:${ht}px;left:calc(${(di+1)/8*100}% + 2px);width:calc(${1/8*100}% - 5px);background:${c}24;border-color:${c};color:#111111;`;
-    const p=persons.find(x=>x.id===s.personId);
-    // 工場予定は時刻非表示
-    let inner=`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>`;
-    if(p)inner+=`<div class="bs">${p.name}</div>`;
-    b.innerHTML=inner;
-    const bid=s._baseId||s.id;
-    b.onclick=(e)=>{e.stopPropagation();isPersonal?openPMEdit(bid):openFMEdit(bid);};
-    grid.appendChild(b);
+  // Overlay time-based blocks（DOM描画後に実測してから配置）
+  requestAnimationFrame(()=>{
+    const grid=document.getElementById('wg');
+    if(!grid)return;
+    const gridW=grid.offsetWidth;
+    const timeColW=65; // 時刻列の幅（CSS: 65px）
+    const dayW=(gridW-timeColW)/7; // 1日分の幅
+
+    vis.filter(s=>!s._kind).forEach(s=>{
+      const sd=new Date(s.start),ed=new Date(s.end);
+      const di=days.findIndex(d=>dOnly(d).getTime()===dOnly(sd).getTime());
+      if(di===-1)return;
+      const sh=sd.getHours()+sd.getMinutes()/60;
+      const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
+      const alldayOffset=hasAllday?24:0;
+      const top=(sh-7)*46+34+alldayOffset;
+      const ht=Math.max((eh-sh)*46,16);
+      const left=timeColW+(di*dayW)+2;
+      const width=dayW-5;
+      const c=getColor(s);
+      const isPersonal=s.type==='personal';
+      const b=document.createElement('div');
+      b.className='sch-block'+(isPersonal?' personal-stripe':'');
+      b.style.cssText=`top:${top}px;height:${ht}px;left:${left}px;width:${width}px;background:${c}24;border-color:${c};color:#111111;`;
+      const p=persons.find(x=>x.id===s.personId);
+      let inner=`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>`;
+      if(p)inner+=`<div class="bs">${p.name}</div>`;
+      b.innerHTML=inner;
+      const bid=s._baseId||s.id;
+      b.onclick=(e)=>{e.stopPropagation();isPersonal?openPMEdit(bid):openFMEdit(bid);};
+      grid.appendChild(b);
+    });
   });
 }
 
