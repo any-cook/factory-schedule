@@ -782,13 +782,17 @@ function tomorrowAt(h,m){const d=new Date();d.setDate(d.getDate()+1);d.setHours(
 function todayDateStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function tomorrowDateStr(){const d=new Date();d.setDate(d.getDate()+1);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function toDateStr(iso){if(!iso)return'';const d=new Date(iso);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
-function dateStrToISO(s){if(!s)return'';return new Date(s+'T00:00:00').toISOString();}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 function pad(n){return String(n).padStart(2,'0');}
 function toInput(iso){const d=new Date(iso);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function dtStr(date,h,m){const d=new Date(date);d.setHours(h,m,0,0);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(h)}:${pad(m)}`;}
 function fmtT(iso){const d=new Date(iso);return`${pad(d.getHours())}:${pad(d.getMinutes())}`;}
-function dOnly(d){const r=new Date(d);r.setHours(0,0,0,0);return r;}
+// ローカル時刻で日付だけを比較するためのキー（タイムゾーンズレ防止）
+function dOnly(d){
+  const dt=new Date(d);
+  // ローカル時刻のYYYY-MM-DDをミリ秒に変換（UTC基準でなくローカル基準）
+  return new Date(dt.getFullYear(),dt.getMonth(),dt.getDate(),0,0,0,0);
+}
 function getColor(s){
   if(s._kind==='ship')return s.shipColor||'#bc8cff';
   if(s._kind==='mfg'){const fc=factories.find(f=>f.id===s.factoryId);return s.color||(fc?.color||'#f0883e');}
@@ -1561,7 +1565,42 @@ function openFactoryModal(){
   document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===(selectedFactoryId||factories[0]?.id)?'selected':''}>${f.name}</option>`).join('');
   document.getElementById('factoryModal').classList.add('open');
 }
-function openFMAt(dt){openFactoryModal();}
+// datetime-local入力値（YYYY-MM-DDTHH:MM）をローカル時刻のISOに変換
+function localDatetimeToISO(val){
+  if(!val)return new Date().toISOString();
+  const parts=val.split('T');
+  const dateParts=parts[0].split('-');
+  const timeParts=(parts[1]||'00:00').split(':');
+  const d=new Date(
+    parseInt(dateParts[0]),parseInt(dateParts[1])-1,parseInt(dateParts[2]),
+    parseInt(timeParts[0]),parseInt(timeParts[1]||0),0,0
+  );
+  return d.toISOString();
+}
+// 日付文字列(YYYY-MM-DD)をローカル時刻のISOに変換（タイムゾーンズレ防止）
+function dateStrToISO(s){
+  if(!s)return'';
+  // YYYY-MM-DD形式をローカル時刻の0時として扱う
+  const parts=s.split('-');
+  if(parts.length<3)return new Date(s).toISOString();
+  const d=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]),0,0,0,0);
+  return d.toISOString();
+}
+function toDateStr(iso){
+  if(!iso)return'';
+  const d=new Date(iso);
+  // ローカル時刻で日付を取得（UTCでなく）
+  return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function openFMAt(dt){
+  openFactoryModal();
+  if(!dt)return;
+  // dtから日付部分だけ取得（YYYY-MM-DD）
+  const dateOnly=dt.split('T')[0];
+  // 製造日に設定（デフォルトとして）
+  if(document.getElementById('fm_mfg_date'))
+    document.getElementById('fm_mfg_date').value=dateOnly;
+}
 function openFMEdit(id){
   const s=schedules.find(x=>x.id===id);if(!s||s.type!=='factory')return;
   editingFMId=id;fmColor=s.color;
@@ -1890,8 +1929,8 @@ function savePM(){
   }
   const obj={
     type:'personal',title,product:'',
-    start:new Date(document.getElementById('pm_start').value).toISOString(),
-    end:new Date(document.getElementById('pm_end').value).toISOString(),
+    start:localDatetimeToISO(document.getElementById('pm_start').value),
+    end:localDatetimeToISO(document.getElementById('pm_end').value),
     factoryId:null,
     personId:document.getElementById('pm_person').value||null,
     color:pmColor,
