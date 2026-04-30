@@ -1384,31 +1384,34 @@ function renderWeek(area){
       html+=`<div class="day-cell ${wkCls}" onclick="openFMAt('${dtStr(d,h,0)}')"></div>`;
     });
   });
-  html+=`</div>`;area.innerHTML=html;
+  html+=`</div>`;
+
+  // 予定ブロック専用オーバーレイ（時刻列の右側のみをカバー）
+  html+=`<div id="wg-overlay" style="position:absolute;top:0;left:65px;right:0;bottom:0;pointer-events:none;overflow:hidden;"></div>`;
+
+  area.innerHTML=`<div style="position:relative;">${html}</div>`;
 
   // Overlay time-based blocks（DOM描画後に実測してから配置）
   requestAnimationFrame(()=>{
     const grid=document.getElementById('wg');
-    if(!grid)return;
-    const gridRect=grid.getBoundingClientRect();
-    const gridW=grid.offsetWidth;
-    const timeColW=65;
-    const dayW=(gridW-timeColW)/7;
+    const overlay=document.getElementById('wg-overlay');
+    if(!grid||!overlay)return;
 
-    // ヘッダー行（day-header）の実際の高さを計測
+    const overlayW=overlay.offsetWidth; // 時刻列を除いた幅
+    const dayW=overlayW/7;
+
+    // ヘッダー行の実際の高さを計測
     const headerEl=grid.querySelector('.day-header');
     const headerH=headerEl?headerEl.offsetHeight:38;
 
-    // 終日行の高さを計測
+    // 終日バーの高さを計測
     let alldayH=0;
     if(hasAllday){
-      const alldayEl=grid.children[9]; // corner + 7headers + 終日ラベル = index 9
-      // 終日バーの最初のセルを取得
       const alldayCells=grid.querySelectorAll('[style*="min-height:24px"]');
       if(alldayCells.length>0)alldayH=alldayCells[0].offsetHeight||26;
     }
 
-    // 1時間分のセル高さを実測
+    // 1時間セルの実際の高さを計測
     const cellEl=grid.querySelector('.day-cell');
     const cellH=cellEl?cellEl.offsetHeight:46;
 
@@ -1418,24 +1421,23 @@ function renderWeek(area){
       if(di===-1)return;
       const sh=sd.getHours()+sd.getMinutes()/60;
       const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
-      // 7時を起点（hours配列の最初）
       const startHour=7;
       const top=headerH+alldayH+(sh-startHour)*cellH;
       const ht=Math.max((eh-sh)*cellH,16);
-      const left=timeColW+(di*dayW)+2;
+      const left=di*dayW+2;
       const width=dayW-5;
       const c=getColor(s);
       const isPersonal=s.type==='personal';
       const b=document.createElement('div');
       b.className='sch-block'+(isPersonal?' personal-stripe':'');
-      b.style.cssText=`top:${top}px;height:${ht}px;left:${left}px;width:${width}px;background:${c}24;border-color:${c};color:#111111;`;
+      b.style.cssText=`position:absolute;top:${top}px;height:${ht}px;left:${left}px;width:${width}px;background:${c}24;border-color:${c};color:#111111;pointer-events:all;`;
       const p=persons.find(x=>x.id===s.personId);
       let inner=`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>`;
       if(p)inner+=`<div class="bs">${p.name}</div>`;
       b.innerHTML=inner;
       const bid=s._baseId||s.id;
       b.onclick=(e)=>{e.stopPropagation();isPersonal?openPMEdit(bid):openFMEdit(bid);};
-      grid.appendChild(b);
+      overlay.appendChild(b);
     });
   });
 }
