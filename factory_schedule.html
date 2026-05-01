@@ -794,10 +794,14 @@ function pad(n){return String(n).padStart(2,'0');}
 function toInput(iso){const d=new Date(iso);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function dtStr(date,h,m){const d=new Date(date);d.setHours(h,m,0,0);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(h)}:${pad(m)}`;}
 function fmtT(iso){const d=new Date(iso);return`${pad(d.getHours())}:${pad(d.getMinutes())}`;}
-// ローカル時刻で日付だけを比較するためのキー（タイムゾーンズレ防止）
+// 日付をYYYY-MM-DD文字列で返す（タイムゾーン問題を完全排除）
+function dateKey(d){
+  const dt=new Date(d);
+  return`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+}
+// 後方互換のため dOnly も維持（ms比較が必要な箇所用）
 function dOnly(d){
   const dt=new Date(d);
-  // ローカル時刻のYYYY-MM-DDをミリ秒に変換（UTC基準でなくローカル基準）
   return new Date(dt.getFullYear(),dt.getMonth(),dt.getDate(),0,0,0,0);
 }
 function getColor(s){
@@ -1205,42 +1209,36 @@ function filteredBase(){
 }
 
 function getVisible(start,end){
-  const rs=dOnly(start).getTime(),re=dOnly(end).getTime();
+  const rsKey=dateKey(start), reKey=dateKey(end);
   const result=[];
   filteredBase().forEach(s=>{
     if(!s.repeatId){
-      // 工場予定：製造日・発送日どちらもない場合のみ本体をstart日で表示
-      // 製造日か発送日があれば、それぞれ仮想エントリで表示（本体は非表示）
       if(s.type==='factory'){
         const hasMfg=!!s.mfgDate;
         const hasShip=!!s.shipDate;
-        // 製造日も発送日もない場合 → 本体を登録日として表示
         if(!hasMfg&&!hasShip){
-          const sd=dOnly(new Date(s.start)).getTime();
-          if(sd>=rs&&sd<=re)result.push(s);
+          const sdKey=dateKey(new Date(s.start));
+          if(sdKey>=rsKey&&sdKey<=reKey)result.push(s);
         }
-        // 製造日の仮想エントリ
         if(hasMfg){
-          const md=dOnly(new Date(s.mfgDate+'T00:00:00')).getTime();
-          if(md>=rs&&md<=re){
+          const mk=s.mfgDate;
+          if(mk>=rsKey&&mk<=reKey){
             result.push({...s,id:s.id+'_mfg',_baseId:s.id,_kind:'mfg',
               start:s.mfgDate+'T00:00:00',end:s.mfgDate+'T00:00:00',
               title:'🍲 '+s.title,color:getColor(s)});
           }
         }
-        // 発送日の仮想エントリ
         if(hasShip){
-          const shd=dOnly(new Date(s.shipDate+'T00:00:00')).getTime();
-          if(shd>=rs&&shd<=re){
+          const sk=s.shipDate;
+          if(sk>=rsKey&&sk<=reKey){
             result.push({...s,id:s.id+'_ship',_baseId:s.id,_kind:'ship',
               start:s.shipDate+'T00:00:00',end:s.shipDate+'T00:00:00',
               title:'🚚 '+s.title,color:s.shipColor||'#bc8cff'});
           }
         }
       } else {
-        // 個人予定は通常通り表示
-        const sd=dOnly(new Date(s.start)).getTime();
-        if(sd>=rs&&sd<=re)result.push(s);
+        const sdKey=dateKey(new Date(s.start));
+        if(sdKey>=rsKey&&sdKey<=reKey)result.push(s);
       }
     } else {
       const series=repeatSeries.find(r=>r.id===s.repeatId);
@@ -1357,7 +1355,7 @@ function renderWeek(area){
 
   // 曜日ヘッダー
   days.forEach((d,i)=>{
-    const isT=dOnly(d).getTime()===todayD.getTime();
+    const isT=dateKey(d)===dateKey(todayD);
     const dow=d.getDay();
     const wkCls=dow===6?'sat':dow===0?'sun':'';
     html+=`<div class="day-header ${isT?'today':''} ${wkCls}"><div class="dn">${DN[i]}</div><div class="dd">${d.getDate()}</div></div>`;
@@ -1369,7 +1367,7 @@ function renderWeek(area){
     days.forEach(d=>{
       const dow=d.getDay();
       const wkCls=dow===6?'sat':dow===0?'sun':'';
-      const dayItems=alldayItems.filter(s=>dOnly(new Date(s.start)).getTime()===dOnly(d).getTime());
+      const dayItems=alldayItems.filter(s=>dateKey(new Date(s.start))===dateKey(d));
       html+=`<div class="${wkCls}" style="border-left:1px solid var(--border);border-top:1px solid var(--border);padding:2px;min-height:24px;background:var(--surface2);">`;
       dayItems.forEach(s=>{
         const c=getColor(s);const bid=s._baseId||s.id;
@@ -1380,19 +1378,22 @@ function renderWeek(area){
   }
 
   // 時間スロット行（各日の列はposition:relativeで予定を内包）
-  const slotH=48; // 1時間スロットの高さ(px) - CSS min-heightと合わせる
+  const slotH=48; // 1時間スロットの高さ(px)
   hours.forEach(h=>{
     html+=`<div class="time-label">${pad(h)}:00</div>`;
     days.forEach((d,di)=>{
       const dow=d.getDay();
       const wkCls=dow===6?'sat':dow===0?'sun':'';
-      // このスロットに属する予定を取得
+      // 日付をYYYY-MM-DD文字列で比較（タイムゾーン問題を完全排除）
+      const dStr=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       const slotScheds=vis.filter(s=>{
         if(s._kind)return false;
-        if(dOnly(new Date(s.start)).getTime()!==dOnly(d).getTime())return false;
-        const sh=new Date(s.start).getHours()+new Date(s.start).getMinutes()/60;
+        // s.startのローカル日付文字列
+        const sd=new Date(s.start);
+        const sStr=`${sd.getFullYear()}-${pad(sd.getMonth()+1)}-${pad(sd.getDate())}`;
+        if(sStr!==dStr)return false;
+        const sh=sd.getHours()+sd.getMinutes()/60;
         const eh=new Date(s.end).getHours()+new Date(s.end).getMinutes()/60;
-        // この時間スロット(h〜h+1)に重なる予定
         return sh<h+1&&eh>h;
       });
       html+=`<div class="day-cell ${wkCls}" style="position:relative;" onclick="openFMAt('${dtStr(d,h,0)}')">`;
@@ -1401,21 +1402,18 @@ function renderWeek(area){
         const ed=new Date(s.end);
         const sh=sd.getHours()+sd.getMinutes()/60;
         const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
-        // このスロット内での相対位置
-        const topFrac=Math.max(sh-h,0); // 0〜1
-        const htHours=Math.min(eh,h+1)-Math.max(sh,h); // このスロット内の時間数
+        const topFrac=Math.max(sh-h,0);
+        const htHours=Math.min(eh,h+1)-Math.max(sh,h);
         const topPx=topFrac*slotH;
         const htPx=Math.max(htHours*slotH,12);
-        const totalHours=eh-sh;
-        const totalPx=totalHours*slotH;
+        const totalPx=Math.max((eh-sh)*slotH,12);
         const c=getColor(s);
         const isPersonal=s.type==='personal';
         const bid=s._baseId||s.id;
         const p=persons.find(x=>x.id===s.personId);
-        // 最初のスロットのみタイトルを表示（高さは全スロット分）
-        const isFirstSlot=Math.floor(sh)===h||(sh>=h&&sh<h+1);
+        const isFirstSlot=sh>=h&&sh<h+1;
         html+=`<div class="sch-block${isPersonal?' personal-stripe':''}"
-          style="position:absolute;top:${topPx}px;left:2px;right:2px;height:${isFirstSlot?Math.max(totalPx,12):htPx}px;background:${c}24;border-color:${c};color:#111111;z-index:${isFirstSlot?3:1};"
+          style="position:absolute;top:${topPx}px;left:2px;right:2px;height:${isFirstSlot?totalPx:htPx}px;background:${c}24;border-color:${c};color:#111111;z-index:${isFirstSlot?3:1};"
           onclick="event.stopPropagation();${isPersonal?'openPMEdit':'openFMEdit'}('${bid}')">
           ${isFirstSlot?`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>${p?`<div class="bs">${p.name}</div>`:''}`:''}
         </div>`;
@@ -1453,7 +1451,7 @@ function renderMonth(area){
     const isT=dOnly(cell.date).getTime()===todayD.getTime();
     const dow=cell.date.getDay();// 0=日,6=土
     const wkCls=dow===6?'sat':dow===0?'sun':'';
-    const ds=vis.filter(s=>dOnly(new Date(s.start)).getTime()===dOnly(cell.date).getTime());
+    const ds=vis.filter(s=>dateKey(new Date(s.start))===dateKey(cell.date));
     const ds2=dtStr(cell.date,9,0);
     html+=`<div class="mcell ${cell.other?'other':''} ${isT?'today':''} ${wkCls}" onclick="openFMAt('${ds2}')">
       <div class="mday-num">${cell.date.getDate()}</div>
@@ -1497,7 +1495,7 @@ function renderPerson(area){
     <div style="display:grid;grid-template-columns:${cols};position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);">
       <div style="padding:7px 11px;border-right:1px solid var(--border);font-size:10px;color:var(--text-muted);">担当者</div>
       ${days.map((d,i)=>{
-        const isT=dOnly(d).getTime()===todayD.getTime();
+        const isT=dateKey(d)===dateKey(todayD);
         const dow=d.getDay();
         const wkColor=dow===6?'#2176d2':dow===0?'#d93025':'';
         const bgColor=dow===6?'rgba(88,166,255,.04)':dow===0?'rgba(248,81,73,.04)':'';
@@ -1520,7 +1518,7 @@ function renderPerson(area){
         </div>
       </div>
       ${days.map(d=>{
-        const ds=vis.filter(s=>s.personId===p.id&&dOnly(new Date(s.start)).getTime()===dOnly(d).getTime());
+        const ds=vis.filter(s=>s.personId===p.id&&dateKey(new Date(s.start))===dateKey(d));
         return`<div class="pcell" onclick="openFMAt('${dtStr(d,9,0)}')">
           ${ds.map(s=>{const c2=getColor(s);const isP=s.type==='personal';const bid=s._baseId||s._bid||s.id;return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c2}26;color:#111111;" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
             <span class="mevent-time">${fmtT(s.start)}</span>
