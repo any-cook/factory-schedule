@@ -1391,41 +1391,55 @@ function renderWeek(area){
 
   area.innerHTML=`<div style="position:relative;">${html}</div>`;
 
-  // Overlay time-based blocks（DOM描画後に実測してから配置）
+  // Overlay time-based blocks（DOM描画後に実際のセル位置を計測して配置）
   requestAnimationFrame(()=>{
     const grid=document.getElementById('wg');
     const overlay=document.getElementById('wg-overlay');
     if(!grid||!overlay)return;
 
-    const overlayW=overlay.offsetWidth; // 時刻列を除いた幅
-    const dayW=overlayW/7;
+    // 各曜日列の left 位置と幅を、実際のday-cellから取得
+    const allCells=Array.from(grid.querySelectorAll('.day-cell'));
+    // day-cellは hours.length * 7 個あるので、最初の7個が各曜日の基準
+    const colCount=7;
+    const firstRowCells=allCells.slice(0,colCount);
+    const gridRect=grid.getBoundingClientRect();
+    const overlayLeft=65; // overlay の left offset（CSS: left:65px）
 
-    // ヘッダー行の実際の高さを計測
+    // 各列の left と width を実測
+    const colInfo=firstRowCells.map(cell=>{
+      const r=cell.getBoundingClientRect();
+      return{
+        left: r.left - gridRect.left - overlayLeft,
+        width: r.width
+      };
+    });
+
+    // ヘッダー行の高さを実測
     const headerEl=grid.querySelector('.day-header');
     const headerH=headerEl?headerEl.offsetHeight:38;
 
-    // 終日バーの高さを計測
+    // 終日バーの高さ
     let alldayH=0;
     if(hasAllday){
       const alldayCells=grid.querySelectorAll('[style*="min-height:24px"]');
       if(alldayCells.length>0)alldayH=alldayCells[0].offsetHeight||26;
     }
 
-    // 1時間セルの実際の高さを計測
-    const cellEl=grid.querySelector('.day-cell');
+    // 1セルの高さを実測
+    const cellEl=allCells[0];
     const cellH=cellEl?cellEl.offsetHeight:46;
 
     vis.filter(s=>!s._kind).forEach(s=>{
       const sd=new Date(s.start),ed=new Date(s.end);
       const di=days.findIndex(d=>dOnly(d).getTime()===dOnly(sd).getTime());
-      if(di===-1)return;
+      if(di===-1||di>=colCount)return;
       const sh=sd.getHours()+sd.getMinutes()/60;
       const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
       const startHour=7;
       const top=headerH+alldayH+(sh-startHour)*cellH;
       const ht=Math.max((eh-sh)*cellH,16);
-      const left=di*dayW+2;
-      const width=dayW-5;
+      const left=colInfo[di].left+2;
+      const width=colInfo[di].width-5;
       const c=getColor(s);
       const isPersonal=s.type==='personal';
       const b=document.createElement('div');
