@@ -1355,92 +1355,87 @@ function renderCalendar(){
 function renderWeek(area){
   const ws=getWeekStart(currentDate);
   const days=Array.from({length:7},(_,i)=>addDays(ws,i));
-  const todayD=dOnly(new Date());
+  const todayKey=dateKey(new Date());
   const DN=['月','火','水','木','金','土','日'];
-  document.getElementById('dateLabel').textContent=`${ws.getFullYear()}年${ws.getMonth()+1}月${ws.getDate()}日〜`;
-  const hours=Array.from({length:17},(_,i)=>i+7); // 7〜23時
+  document.getElementById('dateLabel').textContent=
+    `${ws.getFullYear()}年${ws.getMonth()+1}月${ws.getDate()}日〜`;
+  const hours=Array.from({length:17},(_,i)=>i+7);
+  const slotH=48;
 
   const vis=getVisible(ws,addDays(ws,6));
   const alldayItems=vis.filter(s=>s._kind==='mfg'||s._kind==='ship');
-  const hasAllday=alldayItems.length>0;
+  const timeItems=vis.filter(s=>!s._kind);
 
-  // 各予定を「どの時間スロット・どの曜日」に属するか整理
-  // 週ビューは各dayの列をposition:relativeにして、その中に絶対配置
-  let html=`<div class="week-grid" id="wg">`;
-
-  // コーナー
-  html+=`<div class="th-corner" style="${hasAllday?'grid-row:span 2;':''}"></div>`;
+  // tableで構築（列ズレが起きない）
+  let html=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;table-layout:fixed;"><colgroup><col style="width:65px;">${days.map(()=>`<col style="width:calc((100% - 65px)/7);">`).join('')}</colgroup><thead>`;
 
   // 曜日ヘッダー
+  html+=`<tr><th style="background:var(--surface);border:1px solid var(--border);"></th>`;
   days.forEach((d,i)=>{
-    const isT=dateKey(d)===dateKey(todayD);
+    const isT=dateKey(d)===todayKey;
     const dow=d.getDay();
     const wkCls=dow===6?'sat':dow===0?'sun':'';
-    html+=`<div class="day-header ${isT?'today':''} ${wkCls}"><div class="dn">${DN[i]}</div><div class="dd">${d.getDate()}</div></div>`;
+    html+=`<th class="day-header ${isT?'today':''} ${wkCls}" style="border:1px solid var(--border);"><div class="dn">${DN[i]}</div><div class="dd">${d.getDate()}</div></th>`;
   });
+  html+=`</tr>`;
 
-  // 終日バー行（製造日・発送日）
-  if(hasAllday){
-    html+=`<div style="background:var(--surface);border-top:1px solid var(--border);padding:3px 4px;font-size:9px;color:var(--text-muted);display:flex;align-items:center;">終日</div>`;
+  // 終日バー
+  if(alldayItems.length>0){
+    html+=`<tr><td style="background:var(--surface);border:1px solid var(--border);padding:3px 4px;font-size:9px;color:var(--text-muted);">終日</td>`;
     days.forEach(d=>{
-      const dow=d.getDay();
-      const wkCls=dow===6?'sat':dow===0?'sun':'';
-      const dayItems=alldayItems.filter(s=>getLocalDateStr(s.start)===dateKey(d));
-      html+=`<div class="${wkCls}" style="border-left:1px solid var(--border);border-top:1px solid var(--border);padding:2px;min-height:24px;background:var(--surface2);">`;
+      const dk=dateKey(d);
+      const dow=d.getDay();const wkCls=dow===6?'sat':dow===0?'sun':'';
+      const dayItems=alldayItems.filter(s=>dateKey(new Date(s.start))===dk);
+      html+=`<td class="${wkCls}" style="border:1px solid var(--border);padding:2px;background:var(--surface2);vertical-align:top;">`;
       dayItems.forEach(s=>{
         const c=getColor(s);const bid=s._baseId||s.id;
-        html+=`<div onclick="openFMEdit('${bid}')" style="font-size:9px;padding:1px 4px;border-radius:3px;background:${c}30;color:#111111;border-left:2px solid ${c};margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;">${s.title}</div>`;
+        html+=`<div onclick="openFMEdit('${bid}')" style="font-size:9px;padding:1px 4px;border-radius:3px;background:${c}30;color:#111;border-left:2px solid ${c};margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;">${s.title}</div>`;
       });
-      html+=`</div>`;
+      html+=`</td>`;
     });
+    html+=`</tr>`;
   }
 
-  // 時間スロット行（各日の列はposition:relativeで予定を内包）
-  const slotH=48; // 1時間スロットの高さ(px)
+  html+=`</thead><tbody>`;
+
+  // 時間スロット行
   hours.forEach(h=>{
-    html+=`<div class="time-label">${pad(h)}:00</div>`;
-    days.forEach((d,di)=>{
-      const dow=d.getDay();
-      const wkCls=dow===6?'sat':dow===0?'sun':'';
-      // 日付をYYYY-MM-DD文字列で比較（タイムゾーン問題を完全排除）
-      const dStr=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-      const slotScheds=vis.filter(s=>{
-        if(s._kind)return false;
-        // s.startからローカル日付を安全に取得
-        const sStr=getLocalDateStr(s.start);
-        if(sStr!==dStr)return false;
-        const sd=new Date(s.start);
-        const sh=sd.getHours()+sd.getMinutes()/60;
+    html+=`<tr><td class="time-label" style="border:1px solid var(--border);height:${slotH}px;vertical-align:top;padding:3px 5px;white-space:nowrap;">${pad(h)}:00</td>`;
+    days.forEach(d=>{
+      const dk=dateKey(d);
+      const dow=d.getDay();const wkCls=dow===6?'sat':dow===0?'sun':'';
+      const slotScheds=timeItems.filter(s=>{
+        if(dateKey(new Date(s.start))!==dk)return false;
+        const sh=new Date(s.start).getHours()+new Date(s.start).getMinutes()/60;
         const eh=new Date(s.end).getHours()+new Date(s.end).getMinutes()/60;
         return sh<h+1&&eh>h;
       });
-      html+=`<div class="day-cell ${wkCls}" style="position:relative;" onclick="openFMAt('${dtStr(d,h,0)}')">`;
+      html+=`<td class="day-cell ${wkCls}" style="border:1px solid var(--border);height:${slotH}px;vertical-align:top;padding:0;position:relative;" onclick="openFMAt('${dtStr(d,h,0)}')">`;
       slotScheds.forEach(s=>{
-        const sd=new Date(s.start);
-        const ed=new Date(s.end);
+        const sd=new Date(s.start);const ed=new Date(s.end);
         const sh=sd.getHours()+sd.getMinutes()/60;
         const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
-        const topFrac=Math.max(sh-h,0);
-        const htHours=Math.min(eh,h+1)-Math.max(sh,h);
-        const topPx=topFrac*slotH;
-        const htPx=Math.max(htHours*slotH,12);
-        const totalPx=Math.max((eh-sh)*slotH,12);
+        const isFirstSlot=sh>=h&&sh<h+1;
+        const topPx=Math.max(sh-h,0)*slotH;
+        const totalPx=Math.max((eh-sh)*slotH,16);
         const c=getColor(s);
         const isPersonal=s.type==='personal';
         const bid=s._baseId||s.id;
         const p=persons.find(x=>x.id===s.personId);
-        const isFirstSlot=sh>=h&&sh<h+1;
-        html+=`<div class="sch-block${isPersonal?' personal-stripe':''}"
-          style="position:absolute;top:${topPx}px;left:2px;right:2px;height:${isFirstSlot?totalPx:htPx}px;background:${c}24;border-color:${c};color:#111111;z-index:${isFirstSlot?3:1};"
-          onclick="event.stopPropagation();${isPersonal?'openPMEdit':'openFMEdit'}('${bid}')">
-          ${isFirstSlot?`<div class="bt">${s.repeatId?'↻ ':''}`+(isPersonal?'👤 ':'')+`${s.title}</div>${p?`<div class="bs">${p.name}</div>`:''}`:''}
-        </div>`;
+        const blockH=isFirstSlot?totalPx:slotH-topPx;
+        let inner='';
+        if(isFirstSlot){
+          inner=`<div class="bt">${s.repeatId?'↻ ':(isPersonal?'👤 ':'')}${s.title}</div>`;
+          if(p)inner+=`<div class="bs">${p.name}</div>`;
+        }
+        html+=`<div class="sch-block${isPersonal?' personal-stripe':''}" style="position:absolute;top:${topPx}px;left:1px;right:1px;height:${blockH}px;background:${c}24;border-color:${c};color:#111;z-index:2;overflow:hidden;" onclick="event.stopPropagation();${isPersonal?'openPMEdit':'openFMEdit'}('${bid}')">${inner}</div>`;
       });
-      html+=`</div>`;
+      html+=`</td>`;
     });
+    html+=`</tr>`;
   });
 
-  html+=`</div>`;
+  html+=`</tbody></table></div>`;
   area.innerHTML=html;
 }
 
