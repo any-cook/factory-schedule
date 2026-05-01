@@ -794,8 +794,25 @@ function pad(n){return String(n).padStart(2,'0');}
 function toInput(iso){const d=new Date(iso);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function dtStr(date,h,m){const d=new Date(date);d.setHours(h,m,0,0);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(h)}:${pad(m)}`;}
 function fmtT(iso){const d=new Date(iso);return`${pad(d.getHours())}:${pad(d.getMinutes())}`;}
-// 日付をYYYY-MM-DD文字列で返す（タイムゾーン問題を完全排除）
+// ISOString等からローカル日付(YYYY-MM-DD)を安全に取得
+// UTC形式("...Z")の場合はローカル時刻に変換してから日付を取得
+function getLocalDateStr(isoOrDate){
+  if(!isoOrDate)return'';
+  const dt=new Date(isoOrDate);
+  // getFullYear/Month/Date はローカル時刻を返す（UTCでなく）
+  return`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+}
+
+// 日付をYYYY-MM-DD文字列で返す（あらゆる形式に対応・タイムゾーン問題を完全排除）
 function dateKey(d){
+  if(!d)return'';
+  // 既にYYYY-MM-DD形式の文字列の場合はそのまま返す
+  if(typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d))return d;
+  // YYYY-MM-DDTHH:MM形式（datetime-local）の場合は日付部分だけ返す
+  if(typeof d==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(d)){
+    return d.slice(0,10);
+  }
+  // Dateオブジェクトやその他の場合はローカル時刻で計算
   const dt=new Date(d);
   return`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
 }
@@ -1209,7 +1226,8 @@ function filteredBase(){
 }
 
 function getVisible(start,end){
-  const rsKey=dateKey(start), reKey=dateKey(end);
+  const rsKey=`${start.getFullYear()}-${pad(start.getMonth()+1)}-${pad(start.getDate())}`;
+  const reKey=`${end.getFullYear()}-${pad(end.getMonth()+1)}-${pad(end.getDate())}`;
   const result=[];
   filteredBase().forEach(s=>{
     if(!s.repeatId){
@@ -1217,11 +1235,11 @@ function getVisible(start,end){
         const hasMfg=!!s.mfgDate;
         const hasShip=!!s.shipDate;
         if(!hasMfg&&!hasShip){
-          const sdKey=dateKey(new Date(s.start));
+          const sdKey=getLocalDateStr(s.start);
           if(sdKey>=rsKey&&sdKey<=reKey)result.push(s);
         }
         if(hasMfg){
-          const mk=s.mfgDate;
+          const mk=s.mfgDate.slice(0,10);
           if(mk>=rsKey&&mk<=reKey){
             result.push({...s,id:s.id+'_mfg',_baseId:s.id,_kind:'mfg',
               start:s.mfgDate+'T00:00:00',end:s.mfgDate+'T00:00:00',
@@ -1229,7 +1247,7 @@ function getVisible(start,end){
           }
         }
         if(hasShip){
-          const sk=s.shipDate;
+          const sk=s.shipDate.slice(0,10);
           if(sk>=rsKey&&sk<=reKey){
             result.push({...s,id:s.id+'_ship',_baseId:s.id,_kind:'ship',
               start:s.shipDate+'T00:00:00',end:s.shipDate+'T00:00:00',
@@ -1237,7 +1255,7 @@ function getVisible(start,end){
           }
         }
       } else {
-        const sdKey=dateKey(new Date(s.start));
+        const sdKey=getLocalDateStr(s.start);
         if(sdKey>=rsKey&&sdKey<=reKey)result.push(s);
       }
     } else {
@@ -1367,7 +1385,7 @@ function renderWeek(area){
     days.forEach(d=>{
       const dow=d.getDay();
       const wkCls=dow===6?'sat':dow===0?'sun':'';
-      const dayItems=alldayItems.filter(s=>dateKey(new Date(s.start))===dateKey(d));
+      const dayItems=alldayItems.filter(s=>getLocalDateStr(s.start)===dateKey(d));
       html+=`<div class="${wkCls}" style="border-left:1px solid var(--border);border-top:1px solid var(--border);padding:2px;min-height:24px;background:var(--surface2);">`;
       dayItems.forEach(s=>{
         const c=getColor(s);const bid=s._baseId||s.id;
@@ -1388,10 +1406,10 @@ function renderWeek(area){
       const dStr=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       const slotScheds=vis.filter(s=>{
         if(s._kind)return false;
-        // s.startのローカル日付文字列
-        const sd=new Date(s.start);
-        const sStr=`${sd.getFullYear()}-${pad(sd.getMonth()+1)}-${pad(sd.getDate())}`;
+        // s.startからローカル日付を安全に取得
+        const sStr=getLocalDateStr(s.start);
         if(sStr!==dStr)return false;
+        const sd=new Date(s.start);
         const sh=sd.getHours()+sd.getMinutes()/60;
         const eh=new Date(s.end).getHours()+new Date(s.end).getMinutes()/60;
         return sh<h+1&&eh>h;
@@ -1451,7 +1469,7 @@ function renderMonth(area){
     const isT=dOnly(cell.date).getTime()===todayD.getTime();
     const dow=cell.date.getDay();// 0=日,6=土
     const wkCls=dow===6?'sat':dow===0?'sun':'';
-    const ds=vis.filter(s=>dateKey(new Date(s.start))===dateKey(cell.date));
+    const ds=vis.filter(s=>getLocalDateStr(s.start)===dateKey(cell.date));
     const ds2=dtStr(cell.date,9,0);
     html+=`<div class="mcell ${cell.other?'other':''} ${isT?'today':''} ${wkCls}" onclick="openFMAt('${ds2}')">
       <div class="mday-num">${cell.date.getDate()}</div>
@@ -1518,7 +1536,7 @@ function renderPerson(area){
         </div>
       </div>
       ${days.map(d=>{
-        const ds=vis.filter(s=>s.personId===p.id&&dateKey(new Date(s.start))===dateKey(d));
+        const ds=vis.filter(s=>s.personId===p.id&&getLocalDateStr(s.start)===dateKey(d));
         return`<div class="pcell" onclick="openFMAt('${dtStr(d,9,0)}')">
           ${ds.map(s=>{const c2=getColor(s);const isP=s.type==='personal';const bid=s._baseId||s._bid||s.id;return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c2}26;color:#111111;" onclick="event.stopPropagation();${isP?'openPMEdit':'openFMEdit'}('${bid}')">
             <span class="mevent-time">${fmtT(s.start)}</span>
