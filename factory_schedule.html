@@ -682,9 +682,10 @@ select option{background:#ffffff;color:#1a1d23;}
         </div>
       </div>
       <div class="msec">
-        <div class="msec-title">🍲 製造日・🚚 発送日</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">発送日はカレンダー上で別色で表示されます</div>
-        <div class="field-row">
+        <div class="msec-title">🍲 製造日・🚚 発送日・📅 予定</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">各日付を入力するとカレンダーに表示されます（発送日は別色）</div>
+        <!-- 製造日・発送日 -->
+        <div class="field-row" style="margin-bottom:10px;">
           <div class="field"><label>🍲 製造日</label><input id="fm_mfg_date" type="date"></div>
           <div class="field">
             <label>🚚 発送日</label>
@@ -695,14 +696,12 @@ select option{background:#ffffff;color:#1a1d23;}
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- 予定セクション（製造・発送とは別） -->
-      <div class="msec">
-        <div class="msec-title">📅 予定</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">製造・発送以外の予定を日付と内容で入力できます</div>
-        <div id="fm_schedItems" style="display:flex;flex-direction:column;gap:8px;"></div>
-        <button type="button" onclick="addFMSchedItem()" style="margin-top:8px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);padding:6px 14px;cursor:pointer;font-size:12px;font-family:'Noto Sans JP',sans-serif;width:100%;transition:background .14s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+        <!-- 区切り線 -->
+        <div style="border-top:1px solid var(--border);margin-bottom:10px;"></div>
+        <!-- 予定リスト（製造・発送と同列） -->
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">📅 予定（日付と内容）</div>
+        <div id="fm_schedItems" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <button type="button" onclick="addFMSchedItem()" style="margin-top:7px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);padding:5px 12px;cursor:pointer;font-size:12px;font-family:'Noto Sans JP',sans-serif;width:100%;transition:background .14s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
           ＋ 予定を追加
         </button>
       </div>
@@ -1522,7 +1521,9 @@ function getVisible(start,end){
       if(s.type==='factory'){
         const hasMfg=!!s.mfgDate;
         const hasShip=!!s.shipDate;
-        if(!hasMfg&&!hasShip){
+        const hasSched=!!(s.schedItems&&s.schedItems.filter(i=>i.date).length>0);
+        // 製造日・発送日・予定のいずれもない場合のみ本体を登録日に表示
+        if(!hasMfg&&!hasShip&&!hasSched){
           const sdKey=getLocalDateStr(s.start);
           if(sdKey>=rsKey&&sdKey<=reKey)result.push(s);
         }
