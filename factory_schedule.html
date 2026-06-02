@@ -696,6 +696,16 @@ select option{background:#ffffff;color:#1a1d23;}
           </div>
         </div>
       </div>
+
+      <!-- 予定セクション（製造・発送とは別） -->
+      <div class="msec">
+        <div class="msec-title">📅 予定</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">製造・発送以外の予定を日付と内容で入力できます</div>
+        <div id="fm_schedItems" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button type="button" onclick="addFMSchedItem()" style="margin-top:8px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);padding:6px 14px;cursor:pointer;font-size:12px;font-family:'Noto Sans JP',sans-serif;width:100%;transition:background .14s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+          ＋ 予定を追加
+        </button>
+      </div>
       <div class="msec">
         <div class="msec-title">🎨 色設定</div>
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">工場の既定色またはカスタム色を選択</div>
@@ -1889,6 +1899,52 @@ function selectCPick(containerId, color){
 }
 
 // ══════════════════════════════
+// 工場予定アイテム管理
+// ══════════════════════════════
+let fmSchedItems = []; // [{date:'2026-05-01', content:'〇〇の確認'}]
+
+function addFMSchedItem(date='', content=''){
+  const idx = fmSchedItems.length;
+  fmSchedItems.push({date, content});
+  renderFMSchedItems();
+}
+
+function removeFMSchedItem(idx){
+  fmSchedItems.splice(idx, 1);
+  renderFMSchedItems();
+}
+
+function renderFMSchedItems(){
+  const container = document.getElementById('fm_schedItems');
+  if(!container) return;
+  container.innerHTML = fmSchedItems.map((item, idx) => `
+    <div style="display:grid;grid-template-columns:130px 1fr auto;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;">
+      <input type="date" value="${item.date}"
+        oninput="fmSchedItems[${idx}].date=this.value"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px;font-size:12px;outline:none;width:100%;">
+      <input type="text" value="${item.content}" placeholder="内容を入力"
+        oninput="fmSchedItems[${idx}].content=this.value"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:'Noto Sans JP',sans-serif;outline:none;width:100%;">
+      <button onclick="removeFMSchedItem(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;" title="削除">✕</button>
+    </div>
+  `).join('');
+}
+
+function getFMSchedItemsJSON(){
+  return fmSchedItems.filter(item => item.date || item.content);
+}
+
+function resetFMSchedItems(){
+  fmSchedItems = [];
+  renderFMSchedItems();
+}
+
+function loadFMSchedItems(items){
+  fmSchedItems = items ? JSON.parse(JSON.stringify(items)) : [];
+  renderFMSchedItems();
+}
+
+// ══════════════════════════════
 // FACTORY MODAL
 // ══════════════════════════════
 // 工場モーダル専用の繰り返し状態
@@ -1947,6 +2003,7 @@ function openFactoryModal(){
   document.getElementById('fm_notifOn').checked=false;
   document.getElementById('fm_notifUI').style.display='none';
   resetFMRepeat();
+  resetFMSchedItems();
   buildFMColorPicker(null);
   document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===(selectedFactoryId||factories[0]?.id)?'selected':''}>${f.name}</option>`).join('');
   document.getElementById('factoryModal').classList.add('open');
@@ -2001,6 +2058,7 @@ function openFMEdit(id){
   document.getElementById('fm_notifOn').checked=s.notif||false;
   document.getElementById('fm_notifUI').style.display=(s.notif)?'block':'none';
   document.getElementById('fm_notifMin').value=s.notifMin||15;
+  loadFMSchedItems(s.schedItems||[]);
   // repeat
   resetFMRepeat();
   if(s.repeatId){
@@ -2045,6 +2103,7 @@ function copyFM(){
     document.getElementById('fm_notifMin').value=src.notifMin||15;
     document.getElementById('fm_factory').innerHTML=factories.map(f=>`<option value="${f.id}" ${f.id===src.factoryId?'selected':''}>${f.name}</option>`).join('');
     buildFMColorPicker(src.color);
+    loadFMSchedItems(src.schedItems||[]);
     document.getElementById('fmTitle').textContent='工場予定を複写';
     showToast('📋 複写しました。必要な項目を変更して保存してください');
   },120);
