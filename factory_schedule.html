@@ -1254,7 +1254,12 @@ function startFirebaseSync(){
 // Firebaseへの書き込みヘルパー
 function fbSave(path,id,data){
   if(!fbDb)return;
-  fbDb.ref(path+'/'+id).set(data);
+  // undefinedを含む値をFirebaseに渡すとエラーになるのでJSONで正規化
+  const cleaned=JSON.parse(JSON.stringify(data, (k,v)=>v===undefined?null:v));
+  fbDb.ref(path+'/'+id).set(cleaned).catch(e=>{
+    console.error('Firebase save error:',path,id,e.message);
+    showToast('❌ Firebase保存エラー: '+e.message);
+  });
 }
 function fbDelete(path,id){
   if(!fbDb)return;
@@ -1922,6 +1927,63 @@ function selectCPick(containerId, color){
 }
 
 // ══════════════════════════════
+// 工場予定アイテム管理
+// ══════════════════════════════
+let fmSchedItems=[];
+function addFMSchedItem(date,content){
+  date=date||'';content=content||'';
+  fmSchedItems.push({date,content});
+  renderFMSchedItems();
+}
+function removeFMSchedItem(idx){
+  fmSchedItems.splice(idx,1);
+  renderFMSchedItems();
+}
+function renderFMSchedItems(){
+  const container=document.getElementById('fm_schedItems');
+  if(!container)return;
+  container.innerHTML='';
+  fmSchedItems.forEach((item,idx)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:130px 1fr auto;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;';
+    const dIn=document.createElement('input');
+    dIn.type='date';dIn.value=item.date||'';
+    dIn.style.cssText='background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px;font-size:12px;outline:none;width:100%;';
+    dIn.addEventListener('change',function(){fmSchedItems[idx].date=this.value;});
+    const cIn=document.createElement('input');
+    cIn.type='text';cIn.value=item.content||'';cIn.placeholder='内容を入力';
+    cIn.style.cssText='background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:inherit;outline:none;width:100%;';
+    cIn.addEventListener('input',function(){fmSchedItems[idx].content=this.value;});
+    const del=document.createElement('button');
+    del.type='button';del.textContent='✕';del.title='削除';
+    del.style.cssText='background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;';
+    del.addEventListener('click',function(){removeFMSchedItem(idx);});
+    row.appendChild(dIn);row.appendChild(cIn);row.appendChild(del);
+    container.appendChild(row);
+  });
+}
+function getFMSchedItemsJSON(){
+  try{
+    const container=document.getElementById('fm_schedItems');
+    if(!container)return[];
+    const dInputs=Array.from(container.querySelectorAll('input[type="date"]'));
+    const tInputs=Array.from(container.querySelectorAll('input[type="text"]'));
+    const result=[];
+    for(let i=0;i<Math.max(dInputs.length,fmSchedItems.length);i++){
+      const date=String((dInputs[i]?dInputs[i].value:'')||(fmSchedItems[i]?.date)||'');
+      const content=String((tInputs[i]?tInputs[i].value:'')||(fmSchedItems[i]?.content)||'');
+      if(date||content)result.push({date,content});
+    }
+    return result;
+  }catch(e){console.error('getFMSchedItemsJSON:',e);return[];}
+}
+function resetFMSchedItems(){fmSchedItems=[];renderFMSchedItems();}
+function loadFMSchedItems(items){
+  fmSchedItems=items?JSON.parse(JSON.stringify(items)):[];
+  renderFMSchedItems();
+}
+
+// ══════════════════════════════
 // FACTORY MODAL
 // ══════════════════════════════
 // 工場モーダル専用の繰り返し状態
@@ -2468,76 +2530,6 @@ init();
 
 <!-- PWA Service Worker & Manifest (動的生成) -->
 <script>
-// ══════════════════════════════
-// 工場予定アイテム管理
-// ══════════════════════════════
-let fmSchedItems = [];
-
-function addFMSchedItem(date='', content=''){
-  const idx = fmSchedItems.length;
-  fmSchedItems.push({date, content});
-  renderFMSchedItems();
-}
-function removeFMSchedItem(idx){
-  fmSchedItems.splice(idx, 1);
-  renderFMSchedItems();
-}
-function renderFMSchedItems(){
-  const container=document.getElementById('fm_schedItems');
-  if(!container)return;
-  container.innerHTML='';
-  fmSchedItems.forEach((item,idx)=>{
-    const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:130px 1fr auto;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;';
-    // 日付input
-    const dateInput=document.createElement('input');
-    dateInput.type='date';
-    dateInput.value=item.date||'';
-    dateInput.style.cssText='background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px;font-size:12px;outline:none;width:100%;';
-    dateInput.addEventListener('change',()=>{fmSchedItems[idx].date=dateInput.value;});
-    // 内容input
-    const contentInput=document.createElement('input');
-    contentInput.type='text';
-    contentInput.value=item.content||'';
-    contentInput.placeholder='内容を入力';
-    contentInput.style.cssText='background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-size:13px;font-family:\'Noto Sans JP\',sans-serif;outline:none;width:100%;';
-    contentInput.addEventListener('input',()=>{fmSchedItems[idx].content=contentInput.value;});
-    // 削除ボタン
-    const delBtn=document.createElement('button');
-    delBtn.type='button';
-    delBtn.textContent='✕';
-    delBtn.title='削除';
-    delBtn.style.cssText='background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;';
-    delBtn.addEventListener('click',()=>removeFMSchedItem(idx));
-    row.appendChild(dateInput);
-    row.appendChild(contentInput);
-    row.appendChild(delBtn);
-    container.appendChild(row);
-  });
-}
-function getFMSchedItemsJSON(){
-  // fmSchedItems配列から最新値を取得（DOMからも補完）
-  const container=document.getElementById('fm_schedItems');
-  if(!container||fmSchedItems.length===0)return[];
-  // DOM上のinput要素から直接読み取る
-  const dateInputs=container.querySelectorAll('input[type="date"]');
-  const textInputs=container.querySelectorAll('input[type="text"]');
-  const result=[];
-  for(let i=0;i<Math.max(dateInputs.length,fmSchedItems.length);i++){
-    const date=dateInputs[i]?dateInputs[i].value:fmSchedItems[i]?.date||'';
-    const content=textInputs[i]?textInputs[i].value:fmSchedItems[i]?.content||'';
-    if(date||content)result.push({date,content});
-  }
-  return result;
-}
-function resetFMSchedItems(){
-  fmSchedItems = [];
-  renderFMSchedItems();
-}
-function loadFMSchedItems(items){
-  fmSchedItems = items ? JSON.parse(JSON.stringify(items)) : [];
-  renderFMSchedItems();
-}
 
 // ── PWA Manifest を動的に生成してlinkタグに設定 ──
 (function(){
