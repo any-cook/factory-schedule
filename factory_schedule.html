@@ -2087,6 +2087,7 @@ function copyFM(){
 }
 
 function saveFM(){
+  try{
   const title=document.getElementById('fm_title').value.trim();
   if(!title){showToast('⚠ タイトルを入力してください');return;}
   // 繰り返し処理
@@ -2159,6 +2160,11 @@ function saveFM(){
   }
   closeFM();scheduleNotifs();renderSidebar();renderCalendar();
   setTimeout(()=>{fbSaving=false;},2000);
+  }catch(e){
+    fbSaving=false;
+    console.error('saveFM error:',e);
+    showToast('❌ 保存エラー: '+e.message);
+  }
 }
 function deleteFM(){
   if(!editingFMId)return;
@@ -2510,19 +2516,18 @@ function renderFMSchedItems(){
   });
 }
 function getFMSchedItemsJSON(){
-  // DOMから直接読み取ることで確実に最新の値を取得
+  // fmSchedItems配列から最新値を取得（DOMからも補完）
   const container=document.getElementById('fm_schedItems');
-  if(!container)return fmSchedItems.filter(item=>item.date||item.content);
-  const rows=container.querySelectorAll('div[style*="grid"]');
+  if(!container||fmSchedItems.length===0)return[];
+  // DOM上のinput要素から直接読み取る
+  const dateInputs=container.querySelectorAll('input[type="date"]');
+  const textInputs=container.querySelectorAll('input[type="text"]');
   const result=[];
-  rows.forEach(row=>{
-    const inputs=row.querySelectorAll('input');
-    if(inputs.length>=2){
-      const date=inputs[0].value||'';
-      const content=inputs[1].value||'';
-      if(date||content)result.push({date,content});
-    }
-  });
+  for(let i=0;i<Math.max(dateInputs.length,fmSchedItems.length);i++){
+    const date=dateInputs[i]?dateInputs[i].value:fmSchedItems[i]?.date||'';
+    const content=textInputs[i]?textInputs[i].value:fmSchedItems[i]?.content||'';
+    if(date||content)result.push({date,content});
+  }
   return result;
 }
 function resetFMSchedItems(){
