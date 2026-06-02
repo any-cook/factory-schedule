@@ -675,6 +675,10 @@ select option{background:#ffffff;color:#1a1d23;}
             <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">タイトルと製造商品を「 / 」で区切って入力できます</div>
           </div>
           <div class="field"><label>工場 *</label><select id="fm_factory"></select></div>
+          <div class="field">
+            <label>📝 予定・メモ</label>
+            <textarea id="fm_note" rows="3" style="resize:vertical;" placeholder="作業内容・連絡事項・数量・その他メモ…"></textarea>
+          </div>
         </div>
       </div>
       <div class="msec">
@@ -1732,6 +1736,7 @@ function renderWeek(area){
         if(isFirstSlot){
           inner=`<div class="bt">${s.repeatId?'↻ ':(isPersonal?'👤 ':'')}${s.title}</div>`;
           if(p)inner+=`<div class="bs">${p.name}</div>`;
+          if(!isPersonal&&s.note)inner+=`<div class="bs">📝 ${s.note}</div>`;
         }
         html+=`<div class="sch-block${isPersonal?' personal-stripe':''}" style="position:absolute;top:${topPx}px;left:1px;right:1px;height:${blockH}px;background:${c}24;border-color:${c};color:#111;z-index:2;overflow:hidden;" onclick="event.stopPropagation();${isPersonal?'openPMEdit':'openFMEdit'}('${bid}')">${inner}</div>`;
       });
@@ -1804,7 +1809,7 @@ function renderMonth(area){
           ${s.repeatId?'<span style="font-size:8px;opacity:.65;">↻</span>':''}
           ${isP?'<span style="font-size:9px;">👤</span>':''}
           <span class="mevent-title">${s.title}</span>
-        </div>`;
+        </div>${!isP&&s.note?`<div class="mevent-product" style="color:${c};">📝 ${s.note}</div>`:''}`;
       }).join('')}
     </div>`;
   });
@@ -1935,6 +1940,7 @@ function openFactoryModal(){
   document.getElementById('fm_delBtn').style.display='none';
   document.getElementById('fm_copyBtn').style.display='none';
   document.getElementById('fm_title').value='';
+  document.getElementById('fm_note').value='';
   document.getElementById('fm_mfg_date').value='';
   document.getElementById('fm_ship_date').value='';
   document.getElementById('fm_ship_color').value='#bc8cff';
@@ -1988,6 +1994,7 @@ function openFMEdit(id){
   document.getElementById('fm_delBtn').style.display='inline-block';
   document.getElementById('fm_copyBtn').style.display='inline-block';
   document.getElementById('fm_title').value=s.title;
+  document.getElementById('fm_note').value=s.note||'';
   document.getElementById('fm_mfg_date').value=s.mfgDate||'';
   document.getElementById('fm_ship_date').value=s.shipDate||'';
   document.getElementById('fm_ship_color').value=s.shipColor||'#bc8cff';
@@ -2029,6 +2036,7 @@ function copyFM(){
   setTimeout(()=>{
     openFactoryModal();
     document.getElementById('fm_title').value=src.title;
+    document.getElementById('fm_note').value=src.note||'';
     document.getElementById('fm_mfg_date').value=src.mfgDate||'';
     document.getElementById('fm_ship_date').value=src.shipDate||'';
     document.getElementById('fm_ship_color').value=src.shipColor||'#bc8cff';
@@ -2088,7 +2096,7 @@ function saveFM(){
     repeatId,
     notif:document.getElementById('fm_notifOn').checked,
     notifMin:parseInt(document.getElementById('fm_notifMin').value)||15,
-    note:'',
+    note:document.getElementById('fm_note').value||'',
   };
   fbSaving=true;
   if(editingFMId){
