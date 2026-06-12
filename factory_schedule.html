@@ -1559,8 +1559,45 @@ function getVisible(start,end){
           });
         }
       } else {
+        // 個人予定：開始日〜終了日が範囲と重なる場合に表示
+        // 複数日にまたがる場合は各日に分けて仮想エントリを追加
         const sdKey=getLocalDateStr(s.start);
-        if(sdKey>=rsKey&&sdKey<=reKey)result.push(s);
+        const edKey=getLocalDateStr(s.end);
+        if(sdKey<=reKey&&edKey>=rsKey){
+          if(sdKey===edKey){
+            // 同日内で完結する予定（通常）
+            result.push(s);
+          } else {
+            // 複数日にまたがる予定 → 各日に仮想エントリを追加
+            const startD=new Date(new Date(s.start).getFullYear(),new Date(s.start).getMonth(),new Date(s.start).getDate());
+            const endD=new Date(new Date(s.end).getFullYear(),new Date(s.end).getMonth(),new Date(s.end).getDate());
+            let cur=new Date(startD);
+            let dayIdx=0;
+            while(cur<=endD){
+              const curKey=`${cur.getFullYear()}-${pad(cur.getMonth()+1)}-${pad(cur.getDate())}`;
+              if(curKey>=rsKey&&curKey<=reKey){
+                const isFirst=dayIdx===0;
+                const isLast=cur.getTime()===endD.getTime();
+                // 各日のstart/endを設定
+                const dayStart=isFirst?s.start:curKey+'T00:00:00';
+                const dayEnd=isLast?s.end:curKey+'T23:59:00';
+                result.push({
+                  ...s,
+                  id:s.id+(dayIdx===0?'':('_day'+dayIdx)),
+                  _baseId:s.id,
+                  start:dayStart,
+                  end:dayEnd,
+                  _spanLabel:isFirst?'▶ 開始':isLast?'◀ 終了':'━ 継続',
+                  _isSpan:true,
+                  _spanFirst:isFirst,
+                  _spanLast:isLast,
+                });
+              }
+              cur.setDate(cur.getDate()+1);
+              dayIdx++;
+            }
+          }
+        }
       }
     } else {
       const series=repeatSeries.find(r=>r.id===s.repeatId);
@@ -1749,16 +1786,22 @@ function renderWeek(area){
         if(dateKey(new Date(s.start))!==dk)return false;
         const sh=new Date(s.start).getHours()+new Date(s.start).getMinutes()/60;
         const eh=new Date(s.end).getHours()+new Date(s.end).getMinutes()/60;
-        return sh<h+1&&eh>h;
+        // _spanの場合はその日全体（0〜24時）にまたがる可能性あり
+        const effectiveSh=s._isSpan&&!s._spanFirst?0:sh;
+        const effectiveEh=s._isSpan&&!s._spanLast?24:eh;
+        return effectiveSh<h+1&&effectiveEh>h;
       });
       html+=`<td class="day-cell ${wkCls} ${holCls}" style="border:1px solid var(--border);height:${slotH}px;vertical-align:top;padding:0;position:relative;" onclick="openFMAt('${dtStr(d,h,0)}')">`;
       slotScheds.forEach(s=>{
         const sd=new Date(s.start);const ed=new Date(s.end);
         const sh=sd.getHours()+sd.getMinutes()/60;
         const eh=Math.max(ed.getHours()+ed.getMinutes()/60,sh+0.5);
-        const isFirstSlot=sh>=h&&sh<h+1;
-        const topPx=Math.max(sh-h,0)*slotH;
-        const totalPx=Math.max((eh-sh)*slotH,16);
+        // spanの場合その日の表示調整
+        const effectiveSh=s._isSpan&&!s._spanFirst?0:sh;
+        const effectiveEh=s._isSpan&&!s._spanLast?24:eh;
+        const isFirstSlot=effectiveSh>=h&&effectiveSh<h+1;
+        const topPx=Math.max(effectiveSh-h,0)*slotH;
+        const totalPx=Math.max((effectiveEh-effectiveSh)*slotH,16);
         const c=getColor(s);
         const isPersonal=s.type==='personal';
         const bid=s._baseId||s.id;
@@ -1766,11 +1809,14 @@ function renderWeek(area){
         const blockH=isFirstSlot?totalPx:slotH-topPx;
         let inner='';
         if(isFirstSlot){
-          inner=`<div class="bt">${s.repeatId?'↻ ':(isPersonal?'👤 ':'')}${s.title}</div>`;
-          if(p)inner+=`<div class="bs">${p.name}</div>`;
+          const spanIcon=s._isSpan?`<span style="font-size:8px;opacity:.8;">${s._spanLabel} </span>`:'';
+          inner=`<div class="bt">${spanIcon}${s.repeatId&&!s._isSpan?'↻ ':(isPersonal?'👤 ':'')}${s.title}</div>`;
+          if(p&&s._spanFirst!==false)inner+=`<div class="bs">${p.name}</div>`;
           if(!isPersonal&&s.note)inner+=`<div class="bs">📝 ${s.note}</div>`;
         }
-        html+=`<div class="sch-block${isPersonal?' personal-stripe':''}" style="position:absolute;top:${topPx}px;left:1px;right:1px;height:${blockH}px;background:${c}24;border-color:${c};color:#111;z-index:2;overflow:hidden;" onclick="event.stopPropagation();${isPersonal?'openPMEdit':'openFMEdit'}('${bid}')">${inner}</div>`;
+        // spanの継続日は左ボーダーのみで薄く表示
+        const spanStyle=s._isSpan&&!s._spanFirst?`border-left:3px solid ${c};opacity:0.85;`:'';
+        html+=`<div class="sch-block${isPersonal?' personal-stripe':''}" style="position:absolute;top:${topPx}px;left:1px;right:1px;height:${blockH}px;background:${c}24;border-color:${c};color:#111;z-index:2;overflow:hidden;${spanStyle}" onclick="event.stopPropagation();${isPersonal?'openPMEdit':'openFMEdit'}('${bid}')">${inner}</div>`;
       });
       html+=`</td>`;
     });
@@ -1843,9 +1889,9 @@ function renderMonth(area){
             <span class="mevent-title">${dispTitle}</span>
           </div>`;
         }
-        return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c}22;color:#111111;" onclick="event.stopPropagation();${openFn}('${bid}')">
-          ${showTime?`<span class="mevent-time">${fmtT(s.start)}</span>`:''}
-          ${s.repeatId?'<span style="font-size:8px;opacity:.65;">↻</span>':''}
+        return`<div class="mevent ${isP?'personal-stripe':''}" style="background:${c}22;color:#111111;${s._isSpan?`border-left:3px solid ${c};`:''}${s._isSpan&&!s._spanFirst&&!s._spanLast?'border-radius:0;':''}${s._isSpan&&!s._spanLast?'border-right:none;':''}" onclick="event.stopPropagation();${openFn}('${bid}')">
+          ${s._isSpan?`<span style="font-size:8px;color:${c};font-weight:700;flex-shrink:0;">${s._spanLabel}</span>`:(showTime?`<span class="mevent-time">${fmtT(s.start)}</span>`:'')}
+          ${s.repeatId&&!s._isSpan?'<span style="font-size:8px;opacity:.65;">↻</span>':''}
           ${isP?'<span style="font-size:9px;">👤</span>':''}
           <span class="mevent-title">${s.title}</span>
         </div>${!isP&&s.note?`<div class="mevent-product" style="color:${c};">📝 ${s.note}</div>`:''}`;
