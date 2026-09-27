@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "factories": {
+      ".read": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+      ".write": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)"
+    },
+    "persons": {
+      ".read": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+      ".write": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)"
+    },
+    "schedules": {
+      ".read": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+      ".write": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)"
+    },
+    "repeatSeries": {
+      ".read": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+      ".write": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)"
+    },
+    "allowedEmails": {
+      ".read": "auth != null && auth.token.email_verified == true && (auth.token.email.toLowerCase().endsWith('@any-cook.com') || root.child('allowedEmails').child(auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+      ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase().endsWith('@any-cook.com')",
+      "$email": {
+        ".validate": "newData.val() == true"
+      }
+    }
+  }
+}
