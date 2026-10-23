@@ -1,7 +1,7 @@
 // エニクック スケジュール Service Worker
 // 画面ファイルだけをキャッシュし、電波が悪いときも起動できるようにする。
 // 予定データ（Firebase）とログインは常にネットから取得するので、ここでは扱わない。
-const CACHE = 'anycook-schedule-v2';
+const CACHE = 'anycook-schedule-v3';
 const SHELL = [
   './factory_schedule.html',
   './manifest.json',
